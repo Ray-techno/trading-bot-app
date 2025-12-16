@@ -64,11 +64,43 @@
         .empty { text-align: center; padding: 40px 20px; color: #64748b; }
         .last-check { text-align: center; font-size: 11px; color: #475569; margin-top: 10px; }
         
+        .snooze-btn { 
+            position: fixed; 
+            bottom: 20px; 
+            left: 50%; 
+            transform: translateX(-50%); 
+            background: #ef4444; 
+            color: white; 
+            padding: 15px 40px; 
+            border-radius: 50px; 
+            font-size: 18px; 
+            font-weight: bold; 
+            border: none; 
+            box-shadow: 0 4px 20px rgba(239, 68, 68, 0.4);
+            z-index: 1000;
+            animation: bounce 0.5s infinite;
+        }
+        @keyframes bounce {
+            0%, 100% { transform: translateX(-50%) translateY(0); }
+            50% { transform: translateX(-50%) translateY(-10px); }
+        }
+        
         .hidden { display: none; }
     </style>
 </head>
 <body>
     <div class="container">
+        <!-- Mobile Check Warning -->
+        <div id="webWarning" class="card hidden" style="background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.3);">
+            <h3 style="color: #ef4444; margin-bottom: 10px;">⚠️ Desktop Browser Detected</h3>
+            <p style="color: #fca5a5; font-size: 14px; line-height: 1.5;">
+                This trading bot is designed to work as a mobile app only. Please install it using AppsGeyser or open it on your mobile device for full functionality.
+            </p>
+            <p style="color: #fca5a5; font-size: 12px; margin-top: 10px;">
+                🔒 Background running and wake lock features require mobile app installation.
+            </p>
+        </div>
+
         <!-- Header -->
         <div class="header">
             <div class="header-top">
@@ -165,6 +197,39 @@
                 <input type="number" class="form-input" id="durationInput" value="3" min="1" max="10" onchange="saveConfig()">
             </div>
 
+            <div class="form-group">
+                <label class="form-label" style="display: flex; align-items: center; gap: 8px;">
+                    <input type="checkbox" id="snoozeInput" onchange="saveConfig()" style="width: auto;">
+                    Enable Snooze Button (stops alarm early)
+                </label>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" style="display: flex; align-items: center; gap: 8px;">
+                    <input type="checkbox" id="wakeLockInput" onchange="saveConfig()" style="width: auto;">
+                    Keep Screen On (prevents phone sleep)
+                </label>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" style="display: flex; align-items: center; gap: 8px;">
+                    <input type="checkbox" id="notificationInput" onchange="saveConfig()" style="width: auto;">
+                    Show Notifications (works in mobile app)
+                </label>
+            </div>
+
+            <div style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 8px; padding: 12px; margin-top: 15px;">
+                <p style="font-size: 12px; color: #93c5fd; margin: 0;">
+                    <strong>📱 Mobile App Features:</strong><br>
+                    • Background running (keep app open)<br>
+                    • Wake lock (screen stays on)<br>
+                    • Push notifications<br>
+                    • Vibration alerts<br>
+                    <br>
+                    <strong>⚠️ Note:</strong> For 24/7 operation, keep the app open and phone plugged in.
+                </p>
+            </div>
+
             <button class="btn btn-primary" onclick="toggleConfig()">Save & Close</button>
         </div>
 
@@ -177,7 +242,49 @@
         </div>
     </div>
 
+    <button id="snoozeBtn" class="snooze-btn hidden" onclick="snoozeAlarm()">🔕 SNOOZE ALARM</button>
+
     <script>
+        // Mobile detection and app environment check
+        function isMobileDevice() {
+            const userAgent = navigator.userAgent || navigator.vendor || window.opera;
+            
+            // Check if running in AppsGeyser or mobile app
+            const isAppsGeyser = /AppsGeyser|wv|Android.*AppsGeyser/i.test(userAgent);
+            const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+            const isMobile = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent.toLowerCase());
+            const isTablet = /(tablet|ipad|playbook|silk)|(android(?!.*mobi))/i.test(userAgent.toLowerCase());
+            
+            return isAppsGeyser || isStandalone || isMobile || isTablet;
+        }
+
+        function isDesktopBrowser() {
+            const userAgent = navigator.userAgent.toLowerCase();
+            const isDesktop = !isMobileDevice() && 
+                             (userAgent.indexOf('win') > -1 || 
+                              userAgent.indexOf('mac') > -1 || 
+                              userAgent.indexOf('linux') > -1) &&
+                             userAgent.indexOf('mobile') === -1 &&
+                             userAgent.indexOf('tablet') === -1;
+            return isDesktop;
+        }
+
+        // Check device on load
+        window.addEventListener('load', function() {
+            const deviceStatusEl = document.getElementById('deviceStatus');
+            
+            if (isDesktopBrowser()) {
+                document.getElementById('webWarning').classList.remove('hidden');
+                deviceStatusEl.textContent = '🖥️ Desktop Mode (Limited)';
+                deviceStatusEl.style.color = '#ef4444';
+                console.warn('Desktop browser detected - some features may not work properly');
+            } else {
+                deviceStatusEl.textContent = '📱 Mobile App Mode (Full Features)';
+                deviceStatusEl.style.color = '#10b981';
+                console.log('Mobile device detected - full functionality enabled');
+            }
+        });
+
         let bot = {
             isRunning: false,
             symbol: 'BTCUSDT',
@@ -186,12 +293,17 @@
             webhook: '',
             alarmSound: 'beep',
             alarmDuration: 3,
+            snoozeEnabled: true,
+            keepScreenOn: false,
+            showNotifications: true,
+            wakeLock: null,
             signals: [],
             stats: { total: 0, bullish: 0, bearish: 0 },
             sentSignals: new Set(),
             usedSwings: new Set(),
             intervalId: null,
-            audioContext: null
+            audioContext: null,
+            activeOscillators: []
         };
 
         function loadConfig() {
@@ -208,6 +320,9 @@
             document.getElementById('webhookInput').value = bot.webhook;
             document.getElementById('alarmInput').value = bot.alarmSound || 'beep';
             document.getElementById('durationInput').value = bot.alarmDuration || 3;
+            document.getElementById('snoozeInput').checked = bot.snoozeEnabled !== false;
+            document.getElementById('wakeLockInput').checked = bot.keepScreenOn || false;
+            document.getElementById('notificationInput').checked = bot.showNotifications !== false;
             updateDisplay();
         }
 
@@ -218,6 +333,16 @@
             bot.webhook = document.getElementById('webhookInput').value;
             bot.alarmSound = document.getElementById('alarmInput').value;
             bot.alarmDuration = parseInt(document.getElementById('durationInput').value) || 3;
+            bot.snoozeEnabled = document.getElementById('snoozeInput').checked;
+            bot.keepScreenOn = document.getElementById('wakeLockInput').checked;
+            bot.showNotifications = document.getElementById('notificationInput').checked;
+            
+            // Handle wake lock
+            if (bot.keepScreenOn && bot.isRunning) {
+                requestWakeLock();
+            } else {
+                releaseWakeLock();
+            }
             
             const data = {
                 symbol: bot.symbol,
@@ -226,6 +351,9 @@
                 webhook: bot.webhook,
                 alarmSound: bot.alarmSound,
                 alarmDuration: bot.alarmDuration,
+                snoozeEnabled: bot.snoozeEnabled,
+                keepScreenOn: bot.keepScreenOn,
+                showNotifications: bot.showNotifications,
                 signals: bot.signals,
                 stats: bot.stats,
                 sentSignals: Array.from(bot.sentSignals),
@@ -247,6 +375,17 @@
                 return;
             }
             
+            // Check if on desktop browser
+            if (isDesktopBrowser() && !bot.isRunning) {
+                const confirmStart = confirm(
+                    '⚠️ Desktop Browser Detected\n\n' +
+                    'This app is optimized for mobile devices. Background running and wake lock features will not work on desktop browsers.\n\n' +
+                    'For best experience, install as a mobile app using AppsGeyser.\n\n' +
+                    'Do you still want to start the bot?'
+                );
+                if (!confirmStart) return;
+            }
+            
             if (bot.isRunning) {
                 stopBot();
             } else {
@@ -255,11 +394,29 @@
         }
 
         function startBot() {
+            // Request notification permission on mobile
+            if (isMobileDevice() && bot.showNotifications && 'Notification' in window) {
+                if (Notification.permission === 'default') {
+                    Notification.requestPermission().then(permission => {
+                        if (permission === 'granted') {
+                            console.log('✅ Notification permission granted');
+                        }
+                    });
+                }
+            }
+            
             bot.isRunning = true;
             document.getElementById('statusDot').classList.add('active');
             document.getElementById('statusText').textContent = 'Running';
             document.getElementById('toggleBtn').textContent = 'Stop Bot';
             document.getElementById('toggleBtn').className = 'btn btn-stop';
+            
+            // Only enable wake lock on mobile devices
+            if (bot.keepScreenOn && isMobileDevice()) {
+                requestWakeLock();
+            } else if (bot.keepScreenOn && !isMobileDevice()) {
+                console.warn('Wake lock not available on desktop browsers');
+            }
             
             checkMarket();
             bot.intervalId = setInterval(checkMarket, bot.interval * 1000);
@@ -272,9 +429,41 @@
             document.getElementById('toggleBtn').textContent = 'Start Bot';
             document.getElementById('toggleBtn').className = 'btn btn-start';
             
+            releaseWakeLock();
+            
             if (bot.intervalId) {
                 clearInterval(bot.intervalId);
                 bot.intervalId = null;
+            }
+        }
+
+        async function requestWakeLock() {
+            if (!isMobileDevice()) {
+                console.warn('Wake lock is only available on mobile devices');
+                return;
+            }
+            
+            try {
+                if ('wakeLock' in navigator) {
+                    bot.wakeLock = await navigator.wakeLock.request('screen');
+                    console.log('✅ Wake lock activated - screen will stay on');
+                    
+                    bot.wakeLock.addEventListener('release', () => {
+                        console.log('Wake lock released');
+                    });
+                } else {
+                    console.warn('Wake Lock API not supported on this device');
+                }
+            } catch (error) {
+                console.error('Wake lock error:', error);
+            }
+        }
+
+        function releaseWakeLock() {
+            if (bot.wakeLock) {
+                bot.wakeLock.release();
+                bot.wakeLock = null;
+                console.log('Wake lock released');
             }
         }
 
@@ -285,11 +474,27 @@
                 const candles = await fetchCandles();
                 if (!candles || candles.length < 5) return;
 
-                const fvgs = detectFVG(candles);
+                // Check if last candle is complete (not live)
+                const currentTime = Date.now();
+                const lastCandleTime = candles[candles.length - 1][0];
+                const timeframeMs = {
+                    '1m': 60000, '5m': 300000, '15m': 900000,
+                    '30m': 1800000, '1h': 3600000, '4h': 14400000
+                };
+                const tfMs = timeframeMs[bot.timeframe] || 900000;
+
+                // Only analyze if last candle is complete
+                const completedCandles = currentTime - lastCandleTime < tfMs 
+                    ? candles.slice(0, -1)  // Exclude live candle
+                    : candles;
+
+                if (completedCandles.length < 5) return;
+
+                const fvgs = detectFVG(completedCandles);
                 if (fvgs.length === 0) return;
 
                 const latestFvg = fvgs[fvgs.length - 1];
-                const swing = detectSwing(candles, latestFvg);
+                const swing = detectSwing(completedCandles, latestFvg);
                 
                 if (!swing) return;
 
@@ -298,11 +503,12 @@
 
                 if (bot.usedSwings.has(swingKey) || bot.sentSignals.has(signalKey)) return;
 
-                const currentPrice = candles[candles.length - 1][4];
+                const currentPrice = completedCandles[completedCandles.length - 1][4];
                 const signal = calculateSignal(latestFvg, swing, currentPrice);
                 
                 await sendToDiscord(signal);
                 playAlarm();
+                showNotification(signal);
                 
                 bot.sentSignals.add(signalKey);
                 bot.usedSwings.add(swingKey);
@@ -413,6 +619,11 @@
         function playAlarm() {
             if (bot.alarmSound === 'none') return;
             
+            // Show snooze button if enabled
+            if (bot.snoozeEnabled) {
+                document.getElementById('snoozeBtn').classList.remove('hidden');
+            }
+            
             try {
                 if (!bot.audioContext) {
                     bot.audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -421,6 +632,12 @@
                 const ctx = bot.audioContext;
                 const duration = bot.alarmDuration || 3;
                 const now = ctx.currentTime;
+                
+                // Clear any previous oscillators
+                bot.activeOscillators.forEach(osc => {
+                    try { osc.stop(); } catch(e) {}
+                });
+                bot.activeOscillators = [];
                 
                 if (bot.alarmSound === 'beep') {
                     // Simple beep sound
@@ -439,6 +656,7 @@
                         
                         osc.start(now + i * 0.5);
                         osc.stop(now + i * 0.5 + 0.3);
+                        bot.activeOscillators.push(osc);
                     }
                 } else if (bot.alarmSound === 'bell') {
                     // Bell sound
@@ -456,6 +674,7 @@
                     
                     osc.start(now);
                     osc.stop(now + duration);
+                    bot.activeOscillators.push(osc);
                 } else if (bot.alarmSound === 'chime') {
                     // Chime sound (ascending notes)
                     const frequencies = [523.25, 659.25, 783.99]; // C, E, G
@@ -474,6 +693,7 @@
                         
                         osc.start(now + i * 0.3);
                         osc.stop(now + i * 0.3 + 0.5);
+                        bot.activeOscillators.push(osc);
                     });
                 } else if (bot.alarmSound === 'alert') {
                     // Alert sound (alternating high-low)
@@ -493,8 +713,15 @@
                         
                         osc.start(now + i * 0.4);
                         osc.stop(now + i * 0.4 + 0.2);
+                        bot.activeOscillators.push(osc);
                     }
                 }
+                
+                // Auto-hide snooze button after alarm duration
+                setTimeout(() => {
+                    document.getElementById('snoozeBtn').classList.add('hidden');
+                    bot.activeOscillators = [];
+                }, duration * 1000);
                 
                 // Also try vibration on mobile
                 if ('vibrate' in navigator) {
@@ -506,6 +733,48 @@
                 }
             } catch (error) {
                 console.error('Error playing alarm:', error);
+            }
+        }
+
+        function snoozeAlarm() {
+            // Stop all active oscillators
+            bot.activeOscillators.forEach(osc => {
+                try { osc.stop(); } catch(e) {}
+            });
+            bot.activeOscillators = [];
+            
+            // Stop vibration
+            if ('vibrate' in navigator) {
+                navigator.vibrate(0);
+            }
+            
+            // Hide snooze button
+            document.getElementById('snoozeBtn').classList.add('hidden');
+        }
+
+        function showNotification(signal) {
+            if (!bot.showNotifications || !isMobileDevice()) return;
+            
+            // Request notification permission if not granted
+            if ('Notification' in window && Notification.permission === 'default') {
+                Notification.requestPermission();
+            }
+            
+            // Show notification if permission granted
+            if ('Notification' in window && Notification.permission === 'granted') {
+                const notification = new Notification('🎯 New Trading Signal!', {
+                    body: `${signal.type.toUpperCase()} - ${bot.symbol}\nEntry: ${signal.entry.toFixed(2)}\nTP1: ${signal.tp1.toFixed(2)}`,
+                    icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y="75" font-size="75">📊</text></svg>',
+                    badge: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y="75" font-size="75">📈</text></svg>',
+                    tag: 'trading-signal',
+                    requireInteraction: true,
+                    vibrate: [200, 100, 200]
+                });
+                
+                notification.onclick = function() {
+                    window.focus();
+                    notification.close();
+                };
             }
         }
 
