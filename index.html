@@ -1,562 +1,438 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="theme-color" content="#0f172a">
-    <title>FVG Trading Signal Bot</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>FVG Trading Bot</title>
     <style>
-        body { margin: 0; padding: 0; overscroll-behavior: none; }
-        .pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
-        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: Arial, sans-serif; }
+        body { background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); color: #fff; min-height: 100vh; }
+        .container { max-width: 500px; margin: 0 auto; padding: 10px; }
+        
+        .header { background: rgba(30, 41, 59, 0.5); padding: 15px; border-radius: 15px; margin-bottom: 15px; border: 1px solid #334155; }
+        .header-top { display: flex; justify-content: space-between; align-items: center; }
+        .header-title { display: flex; align-items: center; gap: 10px; }
+        .icon { width: 40px; height: 40px; background: linear-gradient(135deg, #3b82f6, #8b5cf6); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+        .title { font-size: 18px; font-weight: bold; }
+        .subtitle { font-size: 12px; color: #94a3b8; margin-top: 2px; }
+        
+        .btn { padding: 10px 20px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 14px; }
+        .btn-settings { background: rgba(51, 65, 85, 0.5); color: #cbd5e1; width: 40px; height: 40px; padding: 0; }
+        .btn-start { background: rgba(34, 197, 94, 0.2); color: #22c55e; }
+        .btn-stop { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
+        .btn-primary { background: rgba(59, 130, 246, 0.2); color: #3b82f6; width: 100%; margin-top: 10px; }
+        
+        .card { background: rgba(30, 41, 59, 0.5); border-radius: 15px; padding: 15px; margin-bottom: 15px; border: 1px solid #334155; }
+        
+        .status-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .status-info { display: flex; align-items: center; gap: 8px; }
+        .status-dot { width: 10px; height: 10px; border-radius: 50%; background: #475569; }
+        .status-dot.active { background: #22c55e; animation: pulse 2s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        
+        .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+        .stat { background: rgba(51, 65, 85, 0.3); padding: 12px; border-radius: 10px; text-align: center; }
+        .stat.bullish { background: rgba(34, 197, 94, 0.1); }
+        .stat.bearish { background: rgba(239, 68, 68, 0.1); }
+        .stat-value { font-size: 24px; font-weight: bold; }
+        .stat.bullish .stat-value { color: #22c55e; }
+        .stat.bearish .stat-value { color: #ef4444; }
+        .stat-label { font-size: 11px; color: #94a3b8; margin-top: 5px; }
+        
+        .config { display: none; }
+        .config.show { display: block; }
+        .form-group { margin-bottom: 12px; }
+        .form-label { display: block; font-size: 12px; color: #94a3b8; margin-bottom: 5px; }
+        .form-input, .form-select { width: 100%; padding: 10px; background: rgba(51, 65, 85, 0.5); border: 1px solid #475569; border-radius: 8px; color: #fff; font-size: 14px; }
+        
+        .signal { background: rgba(34, 197, 94, 0.05); border: 1px solid rgba(34, 197, 94, 0.2); border-radius: 12px; padding: 12px; margin-bottom: 10px; }
+        .signal.bearish { background: rgba(239, 68, 68, 0.05); border-color: rgba(239, 68, 68, 0.2); }
+        .signal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .signal-type { font-weight: bold; color: #22c55e; }
+        .signal.bearish .signal-type { color: #ef4444; }
+        .signal-time { font-size: 11px; color: #64748b; }
+        .signal-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; font-size: 12px; }
+        .signal-item { }
+        .signal-item-label { color: #64748b; }
+        .signal-item-value { font-weight: bold; color: #fff; }
+        .signal-item-value.green { color: #22c55e; }
+        .signal-item-value.red { color: #ef4444; }
+        .signal-item-value.blue { color: #3b82f6; }
+        
+        .empty { text-align: center; padding: 40px 20px; color: #64748b; }
+        .last-check { text-align: center; font-size: 11px; color: #475569; margin-top: 10px; }
+        
+        .hidden { display: none; }
     </style>
 </head>
 <body>
-    <div id="app"></div>
-
-    <script>
-        // Trading Bot Class
-        class TradingSignalBot {
-            constructor() {
-                this.symbol = 'BTCUSDT';
-                this.timeframe = '15m';
-                this.webhookUrl = '';
-                this.interval = 60;
-                this.isRunning = false;
-                this.sentSignals = new Set();
-                this.usedSwings = new Set();
-                this.signals = [];
-                this.stats = { total: 0, bullish: 0, bearish: 0, lastCheck: null };
-                this.intervalId = null;
-                this.loadFromStorage();
-            }
-
-            loadFromStorage() {
-                const saved = localStorage.getItem('tradingBotData');
-                if (saved) {
-                    const data = JSON.parse(saved);
-                    this.webhookUrl = data.webhookUrl || '';
-                    this.symbol = data.symbol || 'BTCUSDT';
-                    this.timeframe = data.timeframe || '15m';
-                    this.interval = data.interval || 60;
-                    this.signals = data.signals || [];
-                    this.stats = data.stats || { total: 0, bullish: 0, bearish: 0, lastCheck: null };
-                    this.sentSignals = new Set(data.sentSignals || []);
-                    this.usedSwings = new Set(data.usedSwings || []);
-                }
-            }
-
-            saveToStorage() {
-                const data = {
-                    webhookUrl: this.webhookUrl,
-                    symbol: this.symbol,
-                    timeframe: this.timeframe,
-                    interval: this.interval,
-                    signals: this.signals,
-                    stats: this.stats,
-                    sentSignals: Array.from(this.sentSignals),
-                    usedSwings: Array.from(this.usedSwings)
-                };
-                localStorage.setItem('tradingBotData', JSON.stringify(data));
-            }
-
-            async getCandles(limit = 100) {
-                try {
-                    const response = await fetch(
-                        `https://api.binance.com/api/v3/klines?symbol=${this.symbol}&interval=${this.timeframe}&limit=${limit}`
-                    );
-                    if (!response.ok) throw new Error('Failed to fetch candles');
-                    const data = await response.json();
-                    return data.map(candle => [
-                        parseInt(candle[0]), // timestamp
-                        parseFloat(candle[1]), // open
-                        parseFloat(candle[2]), // high
-                        parseFloat(candle[3]), // low
-                        parseFloat(candle[4]), // close
-                        parseFloat(candle[5])  // volume
-                    ]);
-                } catch (error) {
-                    console.error('Error fetching candles:', error);
-                    return null;
-                }
-            }
-
-            detectFVG(candles) {
-                const fvgs = [];
-                for (let i = 2; i < candles.length; i++) {
-                    // Bullish FVG: Low[i] > High[i-2]
-                    if (candles[i][3] > candles[i-2][2]) {
-                        fvgs.push({
-                            type: 'bullish',
-                            index: i,
-                            top: candles[i][3],
-                            bottom: candles[i-2][2],
-                            timestamp: candles[i][0]
-                        });
-                    }
-                    // Bearish FVG: High[i] < Low[i-2]
-                    else if (candles[i][2] < candles[i-2][3]) {
-                        fvgs.push({
-                            type: 'bearish',
-                            index: i,
-                            top: candles[i-2][3],
-                            bottom: candles[i][2],
-                            timestamp: candles[i][0]
-                        });
-                    }
-                }
-                return fvgs;
-            }
-
-            detectThreeCandleSwing(candles, fvg) {
-                const fvgIndex = fvg.index;
-                const lookback = 15;
-                const swings = [];
-
-                for (let i = Math.max(3, fvgIndex - lookback); i < fvgIndex - 2; i++) {
-                    const c1 = candles[i];
-                    const c2 = candles[i + 1];
-                    const c3 = candles[i + 2];
-
-                    if (fvg.type === 'bullish') {
-                        // Swing Low: candle2 is lowest
-                        if (c2[3] < c1[3] && c2[3] < c3[3]) {
-                            swings.push({
-                                type: 'swing_low',
-                                swingPoint: c2[3],
-                                timestampStart: c1[0],
-                                timestampMid: c2[0],
-                                timestampEnd: c3[0]
-                            });
-                        }
-                    } else if (fvg.type === 'bearish') {
-                        // Swing High: candle2 is highest
-                        if (c2[2] > c1[2] && c2[2] > c3[2]) {
-                            swings.push({
-                                type: 'swing_high',
-                                swingPoint: c2[2],
-                                timestampStart: c1[0],
-                                timestampMid: c2[0],
-                                timestampEnd: c3[0]
-                            });
-                        }
-                    }
-                }
-
-                return swings.length > 0 ? swings[swings.length - 1] : null;
-            }
-
-            createSwingKey(swing) {
-                return `${swing.timestampStart}_${swing.timestampMid}_${swing.timestampEnd}`;
-            }
-
-            createSignalKey(fvg, swing) {
-                return `${fvg.type}_${fvg.timestamp}_${swing.timestampMid}`;
-            }
-
-            async sendDiscordSignal(signalData) {
-                if (!this.webhookUrl) {
-                    console.error('No webhook URL configured');
-                    return false;
-                }
-
-                try {
-                    const embed = {
-                        title: `🎯 ${signalData.type.toUpperCase()} SIGNAL`,
-                        description: `**${this.symbol}** | ${this.timeframe}\n✅ FVG + 3-Candle Swing Confirmed`,
-                        color: signalData.signalType === 'bullish' ? 3066993 : 15158332,
-                        fields: [
-                            { name: '📊 Signal Type', value: signalData.signalType.toUpperCase(), inline: true },
-                            { name: '💰 Current Price', value: `$${signalData.currentPrice.toFixed(2)}`, inline: true },
-                            { name: '📈 Swing Type', value: signalData.swingType.replace('_', ' ').toUpperCase(), inline: true },
-                            { name: '🎯 FVG Zone', value: `Top: $${signalData.fvgTop.toFixed(2)}\nBottom: $${signalData.fvgBottom.toFixed(2)}`, inline: false },
-                            { name: '🔄 Swing Point', value: `$${signalData.swingPoint.toFixed(2)}`, inline: true },
-                            { name: '🟢 Entry Zone', value: `$${signalData.entryZone.toFixed(2)}`, inline: true },
-                            { name: '⏸️ Stop Loss', value: `$${signalData.stopLoss.toFixed(2)}`, inline: true },
-                            { name: '🎁 Take Profit 1', value: `$${signalData.tp1.toFixed(2)}`, inline: true },
-                            { name: '🎁 Take Profit 2', value: `$${signalData.tp2.toFixed(2)}`, inline: true },
-                            { name: '📏 Risk:Reward', value: `1:${signalData.riskReward.toFixed(2)}`, inline: true }
-                        ],
-                        timestamp: new Date().toISOString(),
-                        footer: { text: 'FVG-Swing Trading Bot • Trade Safely' }
-                    };
-
-                    const response = await fetch(this.webhookUrl, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ embeds: [embed] })
-                    });
-
-                    return response.ok;
-                } catch (error) {
-                    console.error('Error sending Discord webhook:', error);
-                    return false;
-                }
-            }
-
-            async analyzeAndSignal() {
-                const candles = await this.getCandles(100);
-                if (!candles || candles.length < 5) {
-                    console.log('Not enough candle data');
-                    return null;
-                }
-
-                // Check if last candle is complete
-                const currentTime = Date.now();
-                const lastCandleTime = candles[candles.length - 1][0];
-                const timeframeMs = {
-                    '1m': 60000, '5m': 300000, '15m': 900000,
-                    '30m': 1800000, '1h': 3600000, '4h': 14400000
-                };
-                const tfMs = timeframeMs[this.timeframe] || 900000;
-
-                const completedCandles = currentTime - lastCandleTime < tfMs 
-                    ? candles.slice(0, -1) 
-                    : candles;
-
-                // Detect FVGs
-                const fvgs = this.detectFVG(completedCandles);
-                if (fvgs.length === 0) {
-                    console.log('No FVG detected');
-                    return null;
-                }
-
-                const latestFvg = fvgs[fvgs.length - 1];
-                console.log(`✓ FVG detected: ${latestFvg.type.toUpperCase()}`);
-
-                // Check for swing
-                const swing = this.detectThreeCandleSwing(completedCandles, latestFvg);
-                if (!swing) {
-                    console.log('❌ FVG detected but no 3-candle swing found');
-                    return null;
-                }
-
-                const swingKey = this.createSwingKey(swing);
-                const signalKey = this.createSignalKey(latestFvg, swing);
-
-                // Check duplicates
-                if (this.usedSwings.has(swingKey)) {
-                    console.log('❌ This swing already used');
-                    return null;
-                }
-
-                if (this.sentSignals.has(signalKey)) {
-                    console.log('❌ Signal already sent');
-                    return null;
-                }
-
-                console.log(`✓ 3-Candle Swing detected: ${swing.type.toUpperCase()}`);
-
-                const currentPrice = completedCandles[completedCandles.length - 1][4];
-
-                let entryZone, stopLoss, tp1, tp2, risk, reward;
-                const fvgRange = latestFvg.top - latestFvg.bottom;
-
-                if (latestFvg.type === 'bullish') {
-                    entryZone = latestFvg.bottom;
-                    stopLoss = swing.swingPoint * 0.997;
-                    tp1 = latestFvg.top;
-                    tp2 = latestFvg.top + (fvgRange * 1.5);
-                    risk = entryZone - stopLoss;
-                    reward = tp2 - entryZone;
-                } else {
-                    entryZone = latestFvg.top;
-                    stopLoss = swing.swingPoint * 1.003;
-                    tp1 = latestFvg.bottom;
-                    tp2 = latestFvg.bottom - (fvgRange * 1.5);
-                    risk = stopLoss - entryZone;
-                    reward = entryZone - tp2;
-                }
-
-                const riskReward = risk > 0 ? reward / risk : 0;
-
-                const signalData = {
-                    type: `${latestFvg.type} FVG + 3-Candle Swing`,
-                    signalType: latestFvg.type,
-                    currentPrice,
-                    fvgTop: latestFvg.top,
-                    fvgBottom: latestFvg.bottom,
-                    swingType: swing.type,
-                    swingPoint: swing.swingPoint,
-                    entryZone,
-                    stopLoss,
-                    tp1,
-                    tp2,
-                    riskReward
-                };
-
-                // Send to Discord
-                const sent = await this.sendDiscordSignal(signalData);
-                if (sent) {
-                    this.sentSignals.add(signalKey);
-                    this.usedSwings.add(swingKey);
-                    
-                    // Add to signals list
-                    const signal = {
-                        id: Date.now(),
-                        timestamp: new Date().toISOString(),
-                        ...signalData
-                    };
-                    this.signals.unshift(signal);
-                    this.signals = this.signals.slice(0, 20);
-
-                    // Update stats
-                    this.stats.total++;
-                    if (latestFvg.type === 'bullish') this.stats.bullish++;
-                    else this.stats.bearish++;
-
-                    this.saveToStorage();
-                    console.log(`✅ Signal sent to Discord!`);
-                    return signal;
-                }
-
-                return null;
-            }
-
-            start() {
-                if (this.isRunning) return;
-                if (!this.webhookUrl) {
-                    alert('Please configure Discord webhook URL first!');
-                    return;
-                }
-
-                this.isRunning = true;
-                console.log('🤖 Bot started');
-
-                const check = async () => {
-                    this.stats.lastCheck = new Date().toLocaleTimeString();
-                    this.saveToStorage();
-                    await this.analyzeAndSignal();
-                    this.saveToStorage();
-                    window.dispatchEvent(new Event('botUpdate'));
-                };
-
-                check(); // Initial check
-                this.intervalId = setInterval(check, this.interval * 1000);
-            }
-
-            stop() {
-                if (!this.isRunning) return;
-                this.isRunning = false;
-                if (this.intervalId) {
-                    clearInterval(this.intervalId);
-                    this.intervalId = null;
-                }
-                console.log('👋 Bot stopped');
-            }
-        }
-
-        // UI Component
-        const bot = new TradingSignalBot();
-
-        function App() {
-            const [showConfig, setShowConfig] = React.useState(false);
-            const [, forceUpdate] = React.useReducer(x => x + 1, 0);
-
-            React.useEffect(() => {
-                window.addEventListener('botUpdate', forceUpdate);
-                return () => window.removeEventListener('botUpdate', forceUpdate);
-            }, []);
-
-            const Icon = ({ d }) => (
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d={d} />
-                </svg>
-            );
-
-            return (
-                <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
-                    {/* Header */}
-                    <div className="bg-slate-800/50 backdrop-blur border-b border-slate-700">
-                        <div className="max-w-md mx-auto px-4 py-4">
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
-                                        <Icon d="M22 12h-4l-3 9L9 3l-3 9H2" />
-                                    </div>
-                                    <div>
-                                        <h1 className="text-lg font-bold text-white">FVG Signals</h1>
-                                        <p className="text-xs text-slate-400">{bot.symbol} • {bot.timeframe}</p>
-                                    </div>
-                                </div>
-                                <button
-                                    onClick={() => setShowConfig(!showConfig)}
-                                    className="w-10 h-10 bg-slate-700/50 rounded-lg flex items-center justify-center hover:bg-slate-700"
-                                >
-                                    <Icon d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z" />
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="max-w-md mx-auto px-4 py-4 space-y-4">
-                        {/* Status */}
-                        <div className="bg-slate-800/50 rounded-2xl p-4 border border-slate-700">
-                            <div className="flex items-center justify-between mb-4">
-                                <div className="flex items-center gap-2">
-                                    <div className={`w-3 h-3 rounded-full ${bot.isRunning ? 'bg-green-500 pulse' : 'bg-slate-600'}`} />
-                                    <span className="text-sm text-slate-300">{bot.isRunning ? 'Running' : 'Stopped'}</span>
-                                </div>
-                                <button
-                                    onClick={() => bot.isRunning ? bot.stop() : bot.start()}
-                                    className={`px-4 py-2 rounded-lg font-medium ${
-                                        bot.isRunning
-                                            ? 'bg-red-500/20 text-red-400'
-                                            : 'bg-green-500/20 text-green-400'
-                                    }`}
-                                >
-                                    {bot.isRunning ? 'Stop' : 'Start'}
-                                </button>
-                            </div>
-                            <div className="grid grid-cols-3 gap-3">
-                                <div className="bg-slate-700/30 rounded-lg p-3 text-center">
-                                    <div className="text-2xl font-bold text-white">{bot.stats.total}</div>
-                                    <div className="text-xs text-slate-400">Total</div>
-                                </div>
-                                <div className="bg-green-500/10 rounded-lg p-3 text-center">
-                                    <div className="text-2xl font-bold text-green-400">{bot.stats.bullish}</div>
-                                    <div className="text-xs text-slate-400">Bullish</div>
-                                </div>
-                                <div className="bg-red-500/10 rounded-lg p-3 text-center">
-                                    <div className="text-2xl font-bold text-red-400">{bot.stats.bearish}</div>
-                                    <div className="text-xs text-slate-400">Bearish</div>
-                                </div>
-                            </div>
-                            {bot.stats.lastCheck && (
-                                <div className="mt-3 text-xs text-slate-500 text-center">
-                                    Last check: {bot.stats.lastCheck}
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Config */}
-                        {showConfig && (
-                            <div className="bg-slate-800/50 rounded-2xl p-4 border border-slate-700 space-y-3">
-                                <h3 className="font-semibold text-white">Configuration</h3>
-                                <div>
-                                    <label className="block text-xs text-slate-400 mb-1">Symbol</label>
-                                    <select
-                                        value={bot.symbol}
-                                        onChange={(e) => { bot.symbol = e.target.value; bot.saveToStorage(); forceUpdate(); }}
-                                        className="w-full bg-slate-700/50 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm"
-                                    >
-                                        <option value="BTCUSDT">BTC/USDT</option>
-                                        <option value="ETHUSDT">ETH/USDT</option>
-                                        <option value="BNBUSDT">BNB/USDT</option>
-                                        <option value="SOLUSDT">SOL/USDT</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className="block text-xs text-slate-400 mb-1">Timeframe</label>
-                                    <select
-                                        value={bot.timeframe}
-                                        onChange={(e) => { bot.timeframe = e.target.value; bot.saveToStorage(); forceUpdate(); }}
-                                        className="w-full bg-slate-700/50 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm"
-                                    >
-                                        <option value="1m">1 Minute</option>
-                                        <option value="5m">5 Minutes</option>
-                                        <option value="15m">15 Minutes</option>
-                                        <option value="30m">30 Minutes</option>
-                                        <option value="1h">1 Hour</option>
-                                        <option value="4h">4 Hours</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className="block text-xs text-slate-400 mb-1">Check Interval (seconds)</label>
-                                    <input
-                                        type="number"
-                                        value={bot.interval}
-                                        onChange={(e) => { bot.interval = parseInt(e.target.value) || 60; bot.saveToStorage(); forceUpdate(); }}
-                                        className="w-full bg-slate-700/50 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm"
-                                        min="5"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-xs text-slate-400 mb-1">Discord Webhook URL</label>
-                                    <input
-                                        type="text"
-                                        value={bot.webhookUrl}
-                                        onChange={(e) => { bot.webhookUrl = e.target.value; bot.saveToStorage(); forceUpdate(); }}
-                                        placeholder="https://discord.com/api/webhooks/..."
-                                        className="w-full bg-slate-700/50 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm"
-                                    />
-                                </div>
-                                <button
-                                    onClick={() => setShowConfig(false)}
-                                    className="w-full bg-blue-500/20 text-blue-400 rounded-lg py-2 font-medium"
-                                >
-                                    Save
-                                </button>
-                            </div>
-                        )}
-
-                        {/* Signals */}
-                        <div>
-                            <h3 className="font-semibold text-white mb-3">Recent Signals</h3>
-                            {bot.signals.length === 0 ? (
-                                <div className="bg-slate-800/30 rounded-2xl p-8 text-center border border-slate-700/50">
-                                    <p className="text-slate-500 text-sm">No signals yet</p>
-                                </div>
-                            ) : (
-                                bot.signals.map(signal => (
-                                    <div
-                                        key={signal.id}
-                                        className={`mb-3 rounded-2xl p-4 border ${
-                                            signal.signalType === 'bullish'
-                                                ? 'bg-green-500/5 border-green-500/20'
-                                                : 'bg-red-500/5 border-red-500/20'
-                                        }`}
-                                    >
-                                        <div className="flex items-center justify-between mb-3">
-                                            <span className={`font-semibold ${signal.signalType === 'bullish' ? 'text-green-400' : 'text-red-400'}`}>
-                                                {signal.signalType.toUpperCase()} SIGNAL
-                                            </span>
-                                            <span className="text-xs text-slate-500">
-                                                {new Date(signal.timestamp).toLocaleTimeString()}
-                                            </span>
-                                        </div>
-                                        <div className="grid grid-cols-2 gap-3 text-xs">
-                                            <div>
-                                                <span className="text-slate-500">Price</span>
-                                                <div className="text-white font-semibold">${signal.currentPrice.toFixed(2)}</div>
-                                            </div>
-                                            <div>
-                                                <span className="text-slate-500">Entry</span>
-                                                <div className="text-white font-semibold">${signal.entryZone.toFixed(2)}</div>
-                                            </div>
-                                            <div>
-                                                <span className="text-slate-500">Stop Loss</span>
-                                                <div className="text-red-400 font-semibold">${signal.stopLoss.toFixed(2)}</div>
-                                            </div>
-                                            <div>
-                                                <span className="text-slate-500">TP1</span>
-                                                <div className="text-green-400 font-semibold">${signal.tp1.toFixed(2)}</div>
-                                            </div>
-                                            <div>
-                                                <span className="text-slate-500">TP2</span>
-                                                <div className="text-green-400 font-semibold">${signal.tp2.toFixed(2)}</div>
-                                            </div>
-                                            <div>
-                                                <span className="text-slate-500">R:R</span>
-                                                <div className="text-blue-400 font-semibold">1:{signal.riskReward.toFixed(2)}</div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                ))
-                            )}
-                        </div>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div class="header-top">
+                <div class="header-title">
+                    <div class="icon">📊</div>
+                    <div>
+                        <div class="title">FVG Trading Bot</div>
+                        <div class="subtitle" id="symbolDisplay">BTC/USDT • 15m</div>
                     </div>
                 </div>
-            );
+                <button class="btn btn-settings" onclick="toggleConfig()">⚙️</button>
+            </div>
+        </div>
+
+        <!-- Status Card -->
+        <div class="card">
+            <div class="status-row">
+                <div class="status-info">
+                    <div class="status-dot" id="statusDot"></div>
+                    <span id="statusText">Stopped</span>
+                </div>
+                <button class="btn btn-start" id="toggleBtn" onclick="toggleBot()">Start Bot</button>
+            </div>
+            
+            <div class="stats">
+                <div class="stat">
+                    <div class="stat-value" id="totalSignals">0</div>
+                    <div class="stat-label">Total Signals</div>
+                </div>
+                <div class="stat bullish">
+                    <div class="stat-value" id="bullishSignals">0</div>
+                    <div class="stat-label">Bullish</div>
+                </div>
+                <div class="stat bearish">
+                    <div class="stat-value" id="bearishSignals">0</div>
+                    <div class="stat-label">Bearish</div>
+                </div>
+            </div>
+            
+            <div class="last-check" id="lastCheck"></div>
+        </div>
+
+        <!-- Configuration -->
+        <div class="card config" id="configPanel">
+            <h3 style="margin-bottom: 15px;">Configuration</h3>
+            
+            <div class="form-group">
+                <label class="form-label">Trading Pair</label>
+                <select class="form-select" id="symbolInput" onchange="saveConfig()">
+                    <option value="BTCUSDT">BTC/USDT</option>
+                    <option value="ETHUSDT">ETH/USDT</option>
+                    <option value="BNBUSDT">BNB/USDT</option>
+                    <option value="SOLUSDT">SOL/USDT</option>
+                    <option value="ADAUSDT">ADA/USDT</option>
+                    <option value="XRPUSDT">XRP/USDT</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Timeframe</label>
+                <select class="form-select" id="timeframeInput" onchange="saveConfig()">
+                    <option value="1m">1 Minute</option>
+                    <option value="5m">5 Minutes</option>
+                    <option value="15m">15 Minutes</option>
+                    <option value="30m">30 Minutes</option>
+                    <option value="1h">1 Hour</option>
+                    <option value="4h">4 Hours</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Check Interval (seconds)</label>
+                <input type="number" class="form-input" id="intervalInput" value="60" min="10" onchange="saveConfig()">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Discord Webhook URL</label>
+                <input type="text" class="form-input" id="webhookInput" placeholder="https://discord.com/api/webhooks/..." onchange="saveConfig()">
+            </div>
+
+            <button class="btn btn-primary" onclick="toggleConfig()">Save & Close</button>
+        </div>
+
+        <!-- Signals -->
+        <div class="card">
+            <h3 style="margin-bottom: 15px;">Recent Signals</h3>
+            <div id="signalsList">
+                <div class="empty">No signals yet. Start the bot to receive trading signals.</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let bot = {
+            isRunning: false,
+            symbol: 'BTCUSDT',
+            timeframe: '15m',
+            interval: 60,
+            webhook: '',
+            signals: [],
+            stats: { total: 0, bullish: 0, bearish: 0 },
+            sentSignals: new Set(),
+            usedSwings: new Set(),
+            intervalId: null
+        };
+
+        function loadConfig() {
+            const saved = localStorage.getItem('tradingBot');
+            if (saved) {
+                const data = JSON.parse(saved);
+                bot = { ...bot, ...data };
+                bot.sentSignals = new Set(data.sentSignals || []);
+                bot.usedSwings = new Set(data.usedSwings || []);
+            }
+            document.getElementById('symbolInput').value = bot.symbol;
+            document.getElementById('timeframeInput').value = bot.timeframe;
+            document.getElementById('intervalInput').value = bot.interval;
+            document.getElementById('webhookInput').value = bot.webhook;
+            updateDisplay();
         }
 
-        // Render
-        const root = ReactDOM.createRoot(document.getElementById('app'));
-        root.render(React.createElement(App));
-    </script>
+        function saveConfig() {
+            bot.symbol = document.getElementById('symbolInput').value;
+            bot.timeframe = document.getElementById('timeframeInput').value;
+            bot.interval = parseInt(document.getElementById('intervalInput').value) || 60;
+            bot.webhook = document.getElementById('webhookInput').value;
+            
+            const data = {
+                symbol: bot.symbol,
+                timeframe: bot.timeframe,
+                interval: bot.interval,
+                webhook: bot.webhook,
+                signals: bot.signals,
+                stats: bot.stats,
+                sentSignals: Array.from(bot.sentSignals),
+                usedSwings: Array.from(bot.usedSwings)
+            };
+            localStorage.setItem('tradingBot', JSON.stringify(data));
+            updateDisplay();
+        }
 
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+        function toggleConfig() {
+            const panel = document.getElementById('configPanel');
+            panel.classList.toggle('show');
+        }
+
+        function toggleBot() {
+            if (!bot.webhook) {
+                alert('Please configure Discord Webhook URL first!');
+                toggleConfig();
+                return;
+            }
+            
+            if (bot.isRunning) {
+                stopBot();
+            } else {
+                startBot();
+            }
+        }
+
+        function startBot() {
+            bot.isRunning = true;
+            document.getElementById('statusDot').classList.add('active');
+            document.getElementById('statusText').textContent = 'Running';
+            document.getElementById('toggleBtn').textContent = 'Stop Bot';
+            document.getElementById('toggleBtn').className = 'btn btn-stop';
+            
+            checkMarket();
+            bot.intervalId = setInterval(checkMarket, bot.interval * 1000);
+        }
+
+        function stopBot() {
+            bot.isRunning = false;
+            document.getElementById('statusDot').classList.remove('active');
+            document.getElementById('statusText').textContent = 'Stopped';
+            document.getElementById('toggleBtn').textContent = 'Start Bot';
+            document.getElementById('toggleBtn').className = 'btn btn-start';
+            
+            if (bot.intervalId) {
+                clearInterval(bot.intervalId);
+                bot.intervalId = null;
+            }
+        }
+
+        async function checkMarket() {
+            document.getElementById('lastCheck').textContent = 'Last check: ' + new Date().toLocaleTimeString();
+            
+            try {
+                const candles = await fetchCandles();
+                if (!candles || candles.length < 5) return;
+
+                const fvgs = detectFVG(candles);
+                if (fvgs.length === 0) return;
+
+                const latestFvg = fvgs[fvgs.length - 1];
+                const swing = detectSwing(candles, latestFvg);
+                
+                if (!swing) return;
+
+                const swingKey = swing.timestampStart + '_' + swing.timestampMid;
+                const signalKey = latestFvg.type + '_' + latestFvg.timestamp + '_' + swing.timestampMid;
+
+                if (bot.usedSwings.has(swingKey) || bot.sentSignals.has(signalKey)) return;
+
+                const currentPrice = candles[candles.length - 1][4];
+                const signal = calculateSignal(latestFvg, swing, currentPrice);
+                
+                await sendToDiscord(signal);
+                
+                bot.sentSignals.add(signalKey);
+                bot.usedSwings.add(swingKey);
+                bot.signals.unshift(signal);
+                bot.signals = bot.signals.slice(0, 20);
+                bot.stats.total++;
+                if (signal.type === 'bullish') bot.stats.bullish++;
+                else bot.stats.bearish++;
+                
+                saveConfig();
+                updateDisplay();
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+
+        async function fetchCandles() {
+            const response = await fetch(`https://api.binance.com/api/v3/klines?symbol=${bot.symbol}&interval=${bot.timeframe}&limit=100`);
+            const data = await response.json();
+            return data.map(c => [parseInt(c[0]), parseFloat(c[1]), parseFloat(c[2]), parseFloat(c[3]), parseFloat(c[4])]);
+        }
+
+        function detectFVG(candles) {
+            const fvgs = [];
+            for (let i = 2; i < candles.length; i++) {
+                if (candles[i][3] > candles[i-2][2]) {
+                    fvgs.push({ type: 'bullish', index: i, top: candles[i][3], bottom: candles[i-2][2], timestamp: candles[i][0] });
+                } else if (candles[i][2] < candles[i-2][3]) {
+                    fvgs.push({ type: 'bearish', index: i, top: candles[i-2][3], bottom: candles[i][2], timestamp: candles[i][0] });
+                }
+            }
+            return fvgs;
+        }
+
+        function detectSwing(candles, fvg) {
+            const swings = [];
+            const start = Math.max(3, fvg.index - 15);
+            
+            for (let i = start; i < fvg.index - 2; i++) {
+                const c1 = candles[i], c2 = candles[i+1], c3 = candles[i+2];
+                
+                if (fvg.type === 'bullish' && c2[3] < c1[3] && c2[3] < c3[3]) {
+                    swings.push({ type: 'swing_low', swingPoint: c2[3], timestampStart: c1[0], timestampMid: c2[0] });
+                } else if (fvg.type === 'bearish' && c2[2] > c1[2] && c2[2] > c3[2]) {
+                    swings.push({ type: 'swing_high', swingPoint: c2[2], timestampStart: c1[0], timestampMid: c2[0] });
+                }
+            }
+            
+            return swings.length > 0 ? swings[swings.length - 1] : null;
+        }
+
+        function calculateSignal(fvg, swing, price) {
+            const range = fvg.top - fvg.bottom;
+            let entry, stop, tp1, tp2, risk, reward;
+            
+            if (fvg.type === 'bullish') {
+                entry = fvg.bottom;
+                stop = swing.swingPoint * 0.997;
+                tp1 = fvg.top;
+                tp2 = fvg.top + (range * 1.5);
+                risk = entry - stop;
+                reward = tp2 - entry;
+            } else {
+                entry = fvg.top;
+                stop = swing.swingPoint * 1.003;
+                tp1 = fvg.bottom;
+                tp2 = fvg.bottom - (range * 1.5);
+                risk = stop - entry;
+                reward = entry - tp2;
+            }
+            
+            return {
+                id: Date.now(),
+                type: fvg.type,
+                timestamp: new Date().toISOString(),
+                price: price,
+                entry: entry,
+                stop: stop,
+                tp1: tp1,
+                tp2: tp2,
+                rr: (reward / risk).toFixed(2)
+            };
+        }
+
+        async function sendToDiscord(signal) {
+            const embed = {
+                title: `🎯 ${signal.type.toUpperCase()} SIGNAL`,
+                description: `**${bot.symbol}** | ${bot.timeframe}\n✅ FVG + 3-Candle Swing`,
+                color: signal.type === 'bullish' ? 3066993 : 15158332,
+                fields: [
+                    { name: '💰 Price', value: `$${signal.price.toFixed(2)}`, inline: true },
+                    { name: '🟢 Entry', value: `$${signal.entry.toFixed(2)}`, inline: true },
+                    { name: '⏸️ Stop', value: `$${signal.stop.toFixed(2)}`, inline: true },
+                    { name: '🎁 TP1', value: `$${signal.tp1.toFixed(2)}`, inline: true },
+                    { name: '🎁 TP2', value: `$${signal.tp2.toFixed(2)}`, inline: true },
+                    { name: '📏 R:R', value: `1:${signal.rr}`, inline: true }
+                ],
+                timestamp: new Date().toISOString()
+            };
+            
+            await fetch(bot.webhook, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ embeds: [embed] })
+            });
+        }
+
+        function updateDisplay() {
+            document.getElementById('symbolDisplay').textContent = `${bot.symbol} • ${bot.timeframe}`;
+            document.getElementById('totalSignals').textContent = bot.stats.total;
+            document.getElementById('bullishSignals').textContent = bot.stats.bullish;
+            document.getElementById('bearishSignals').textContent = bot.stats.bearish;
+            
+            const list = document.getElementById('signalsList');
+            if (bot.signals.length === 0) {
+                list.innerHTML = '<div class="empty">No signals yet. Start the bot to receive trading signals.</div>';
+            } else {
+                list.innerHTML = bot.signals.map(s => `
+                    <div class="signal ${s.type}">
+                        <div class="signal-header">
+                            <span class="signal-type">${s.type.toUpperCase()} SIGNAL</span>
+                            <span class="signal-time">${new Date(s.timestamp).toLocaleTimeString()}</span>
+                        </div>
+                        <div class="signal-grid">
+                            <div class="signal-item">
+                                <div class="signal-item-label">Price</div>
+                                <div class="signal-item-value">$${s.price.toFixed(2)}</div>
+                            </div>
+                            <div class="signal-item">
+                                <div class="signal-item-label">Entry</div>
+                                <div class="signal-item-value">$${s.entry.toFixed(2)}</div>
+                            </div>
+                            <div class="signal-item">
+                                <div class="signal-item-label">Stop Loss</div>
+                                <div class="signal-item-value red">$${s.stop.toFixed(2)}</div>
+                            </div>
+                            <div class="signal-item">
+                                <div class="signal-item-label">TP1</div>
+                                <div class="signal-item-value green">$${s.tp1.toFixed(2)}</div>
+                            </div>
+                            <div class="signal-item">
+                                <div class="signal-item-label">TP2</div>
+                                <div class="signal-item-value green">$${s.tp2.toFixed(2)}</div>
+                            </div>
+                            <div class="signal-item">
+                                <div class="signal-item-label">Risk:Reward</div>
+                                <div class="signal-item-value blue">1:${s.rr}</div>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            }
+        }
+
+        loadConfig();
+    </script>
 </body>
 </html>
