@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -150,6 +149,22 @@
                 <input type="text" class="form-input" id="webhookInput" placeholder="https://discord.com/api/webhooks/..." onchange="saveConfig()">
             </div>
 
+            <div class="form-group">
+                <label class="form-label">Alarm Sound</label>
+                <select class="form-select" id="alarmInput" onchange="saveConfig()">
+                    <option value="beep">Beep</option>
+                    <option value="bell">Bell</option>
+                    <option value="chime">Chime</option>
+                    <option value="alert">Alert</option>
+                    <option value="none">No Alarm</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Alarm Duration (seconds)</label>
+                <input type="number" class="form-input" id="durationInput" value="3" min="1" max="10" onchange="saveConfig()">
+            </div>
+
             <button class="btn btn-primary" onclick="toggleConfig()">Save & Close</button>
         </div>
 
@@ -169,11 +184,14 @@
             timeframe: '15m',
             interval: 60,
             webhook: '',
+            alarmSound: 'beep',
+            alarmDuration: 3,
             signals: [],
             stats: { total: 0, bullish: 0, bearish: 0 },
             sentSignals: new Set(),
             usedSwings: new Set(),
-            intervalId: null
+            intervalId: null,
+            audioContext: null
         };
 
         function loadConfig() {
@@ -188,6 +206,8 @@
             document.getElementById('timeframeInput').value = bot.timeframe;
             document.getElementById('intervalInput').value = bot.interval;
             document.getElementById('webhookInput').value = bot.webhook;
+            document.getElementById('alarmInput').value = bot.alarmSound || 'beep';
+            document.getElementById('durationInput').value = bot.alarmDuration || 3;
             updateDisplay();
         }
 
@@ -196,12 +216,16 @@
             bot.timeframe = document.getElementById('timeframeInput').value;
             bot.interval = parseInt(document.getElementById('intervalInput').value) || 60;
             bot.webhook = document.getElementById('webhookInput').value;
+            bot.alarmSound = document.getElementById('alarmInput').value;
+            bot.alarmDuration = parseInt(document.getElementById('durationInput').value) || 3;
             
             const data = {
                 symbol: bot.symbol,
                 timeframe: bot.timeframe,
                 interval: bot.interval,
                 webhook: bot.webhook,
+                alarmSound: bot.alarmSound,
+                alarmDuration: bot.alarmDuration,
                 signals: bot.signals,
                 stats: bot.stats,
                 sentSignals: Array.from(bot.sentSignals),
@@ -278,6 +302,7 @@
                 const signal = calculateSignal(latestFvg, swing, currentPrice);
                 
                 await sendToDiscord(signal);
+                playAlarm();
                 
                 bot.sentSignals.add(signalKey);
                 bot.usedSwings.add(swingKey);
@@ -383,6 +408,105 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ embeds: [embed] })
             });
+        }
+
+        function playAlarm() {
+            if (bot.alarmSound === 'none') return;
+            
+            try {
+                if (!bot.audioContext) {
+                    bot.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                
+                const ctx = bot.audioContext;
+                const duration = bot.alarmDuration || 3;
+                const now = ctx.currentTime;
+                
+                if (bot.alarmSound === 'beep') {
+                    // Simple beep sound
+                    for (let i = 0; i < 3; i++) {
+                        const osc = ctx.createOscillator();
+                        const gain = ctx.createGain();
+                        
+                        osc.connect(gain);
+                        gain.connect(ctx.destination);
+                        
+                        osc.frequency.value = 800;
+                        osc.type = 'sine';
+                        
+                        gain.gain.setValueAtTime(0.3, now + i * 0.5);
+                        gain.gain.exponentialRampToValueAtTime(0.01, now + i * 0.5 + 0.3);
+                        
+                        osc.start(now + i * 0.5);
+                        osc.stop(now + i * 0.5 + 0.3);
+                    }
+                } else if (bot.alarmSound === 'bell') {
+                    // Bell sound
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    
+                    osc.frequency.value = 1000;
+                    osc.type = 'sine';
+                    
+                    gain.gain.setValueAtTime(0.5, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + duration);
+                    
+                    osc.start(now);
+                    osc.stop(now + duration);
+                } else if (bot.alarmSound === 'chime') {
+                    // Chime sound (ascending notes)
+                    const frequencies = [523.25, 659.25, 783.99]; // C, E, G
+                    frequencies.forEach((freq, i) => {
+                        const osc = ctx.createOscillator();
+                        const gain = ctx.createGain();
+                        
+                        osc.connect(gain);
+                        gain.connect(ctx.destination);
+                        
+                        osc.frequency.value = freq;
+                        osc.type = 'sine';
+                        
+                        gain.gain.setValueAtTime(0.3, now + i * 0.3);
+                        gain.gain.exponentialRampToValueAtTime(0.01, now + i * 0.3 + 0.5);
+                        
+                        osc.start(now + i * 0.3);
+                        osc.stop(now + i * 0.3 + 0.5);
+                    });
+                } else if (bot.alarmSound === 'alert') {
+                    // Alert sound (alternating high-low)
+                    const times = Math.floor(duration / 0.4);
+                    for (let i = 0; i < times; i++) {
+                        const osc = ctx.createOscillator();
+                        const gain = ctx.createGain();
+                        
+                        osc.connect(gain);
+                        gain.connect(ctx.destination);
+                        
+                        osc.frequency.value = i % 2 === 0 ? 900 : 700;
+                        osc.type = 'square';
+                        
+                        gain.gain.setValueAtTime(0.2, now + i * 0.4);
+                        gain.gain.setValueAtTime(0, now + i * 0.4 + 0.2);
+                        
+                        osc.start(now + i * 0.4);
+                        osc.stop(now + i * 0.4 + 0.2);
+                    }
+                }
+                
+                // Also try vibration on mobile
+                if ('vibrate' in navigator) {
+                    const vibrationPattern = [];
+                    for (let i = 0; i < duration * 2; i++) {
+                        vibrationPattern.push(200, 200);
+                    }
+                    navigator.vibrate(vibrationPattern);
+                }
+            } catch (error) {
+                console.error('Error playing alarm:', error);
+            }
         }
 
         function updateDisplay() {
