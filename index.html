@@ -2,828 +2,158 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <title>FVG Trading Bot</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FVG CHoCH Bot</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: Arial, sans-serif; }
-        body { background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); color: #fff; min-height: 100vh; }
+        body { background: linear-gradient(135deg, #1e293b, #0f172a); color: #fff; min-height: 100vh; }
         .container { max-width: 500px; margin: 0 auto; padding: 10px; }
-        
-        .header { background: rgba(30, 41, 59, 0.5); padding: 15px; border-radius: 15px; margin-bottom: 15px; border: 1px solid #334155; }
-        .header-top { display: flex; justify-content: space-between; align-items: center; }
-        .header-title { display: flex; align-items: center; gap: 10px; }
-        .icon { width: 40px; height: 40px; background: linear-gradient(135deg, #3b82f6, #8b5cf6); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
-        .title { font-size: 18px; font-weight: bold; }
-        .subtitle { font-size: 12px; color: #94a3b8; margin-top: 2px; }
-        
-        .btn { padding: 10px 20px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 14px; }
-        .btn-settings { background: rgba(51, 65, 85, 0.5); color: #cbd5e1; width: 40px; height: 40px; padding: 0; }
+        .card { background: rgba(30, 41, 59, 0.5); border-radius: 15px; padding: 15px; margin-bottom: 15px; border: 1px solid #334155; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .btn { padding: 10px 20px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
         .btn-start { background: rgba(34, 197, 94, 0.2); color: #22c55e; }
         .btn-stop { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
         .btn-primary { background: rgba(59, 130, 246, 0.2); color: #3b82f6; width: 100%; margin-top: 10px; }
-        
-        .card { background: rgba(30, 41, 59, 0.5); border-radius: 15px; padding: 15px; margin-bottom: 15px; border: 1px solid #334155; }
-        
-        .status-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-        .status-info { display: flex; align-items: center; gap: 8px; }
-        .status-dot { width: 10px; height: 10px; border-radius: 50%; background: #475569; }
-        .status-dot.active { background: #22c55e; animation: pulse 2s infinite; }
-        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
-        
         .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-        .stat { background: rgba(51, 65, 85, 0.3); padding: 12px; border-radius: 10px; text-align: center; }
-        .stat.bullish { background: rgba(34, 197, 94, 0.1); }
-        .stat.bearish { background: rgba(239, 68, 68, 0.1); }
+        .stat { background: rgba(51, 65, 85, 0.3); padding: 12px; border-radius: 10px; text-center; }
         .stat-value { font-size: 24px; font-weight: bold; }
-        .stat.bullish .stat-value { color: #22c55e; }
-        .stat.bearish .stat-value { color: #ef4444; }
-        .stat-label { font-size: 11px; color: #94a3b8; margin-top: 5px; }
-        
+        .form-input, .form-select { width: 100%; padding: 10px; background: rgba(51, 65, 85, 0.5); border: 1px solid #475569; border-radius: 8px; color: #fff; margin: 8px 0; }
+        .hidden { display: none; }
         .config { display: none; }
         .config.show { display: block; }
-        .form-group { margin-bottom: 12px; }
-        .form-label { display: block; font-size: 12px; color: #94a3b8; margin-bottom: 5px; }
-        .form-input, .form-select { width: 100%; padding: 10px; background: rgba(51, 65, 85, 0.5); border: 1px solid #475569; border-radius: 8px; color: #fff; font-size: 14px; }
-        
-        .signal { background: rgba(34, 197, 94, 0.05); border: 1px solid rgba(34, 197, 94, 0.2); border-radius: 12px; padding: 12px; margin-bottom: 10px; }
+        .zone-item { background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 10px; padding: 12px; margin: 10px 0; }
+        .zone-item.broken { opacity: 0.5; background: rgba(239, 68, 68, 0.1); }
+        .signal { background: rgba(34, 197, 94, 0.05); border: 1px solid rgba(34, 197, 94, 0.2); border-radius: 12px; padding: 12px; margin: 10px 0; }
         .signal.bearish { background: rgba(239, 68, 68, 0.05); border-color: rgba(239, 68, 68, 0.2); }
-        .signal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-        .signal-type { font-weight: bold; color: #22c55e; }
-        .signal.bearish .signal-type { color: #ef4444; }
-        .signal-time { font-size: 11px; color: #64748b; }
-        .signal-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; font-size: 12px; }
-        .signal-item { }
-        .signal-item-label { color: #64748b; }
-        .signal-item-value { font-weight: bold; color: #fff; }
-        .signal-item-value.green { color: #22c55e; }
-        .signal-item-value.red { color: #ef4444; }
-        .signal-item-value.blue { color: #3b82f6; }
-        
-        .empty { text-align: center; padding: 40px 20px; color: #64748b; }
-        .last-check { text-align: center; font-size: 11px; color: #475569; margin-top: 10px; }
-        
-        .snooze-btn { 
-            position: fixed; 
-            bottom: 20px; 
-            left: 50%; 
-            transform: translateX(-50%); 
-            background: #ef4444; 
-            color: white; 
-            padding: 15px 40px; 
-            border-radius: 50px; 
-            font-size: 18px; 
-            font-weight: bold; 
-            border: none; 
-            box-shadow: 0 4px 20px rgba(239, 68, 68, 0.4);
-            z-index: 1000;
-            animation: bounce 0.5s infinite;
-        }
-        @keyframes bounce {
-            0%, 100% { transform: translateX(-50%) translateY(0); }
-            50% { transform: translateX(-50%) translateY(-10px); }
-        }
-        
-        .hidden { display: none; }
+        .signal-badge { display: inline-block; padding: 4px 8px; border-radius: 6px; font-size: 10px; margin: 5px 5px 0 0; }
+        .signal-badge.fvg { background: rgba(59, 130, 246, 0.2); color: #3b82f6; }
+        .signal-badge.choch { background: rgba(168, 85, 247, 0.2); color: #a855f7; }
+        .tab-buttons { display: flex; gap: 5px; margin-bottom: 15px; }
+        .tab-btn { flex: 1; padding: 10px; background: rgba(51, 65, 85, 0.3); border: none; border-radius: 8px; color: #94a3b8; cursor: pointer; }
+        .tab-btn.active { background: rgba(59, 130, 246, 0.2); color: #3b82f6; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
     </style>
 </head>
 <body>
     <div class="container">
-        <!-- Mobile Check Warning -->
-        <div id="webWarning" class="card hidden" style="background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.3);">
-            <h3 style="color: #ef4444; margin-bottom: 10px;">⚠️ Desktop Browser Detected</h3>
-            <p style="color: #fca5a5; font-size: 14px; line-height: 1.5;">
-                This trading bot is designed to work as a mobile app only. Please install it using AppsGeyser or open it on your mobile device for full functionality.
-            </p>
-            <p style="color: #fca5a5; font-size: 12px; margin-top: 10px;">
-                🔒 Background running and wake lock features require mobile app installation.
-            </p>
-        </div>
-
-        <!-- Header -->
-        <div class="header">
-            <div class="header-top">
-                <div class="header-title">
-                    <div class="icon">📊</div>
-                    <div>
-                        <div class="title">FVG Trading Bot</div>
-                        <div class="subtitle" id="symbolDisplay">BTC/USDT • 15m</div>
-                    </div>
-                </div>
-                <button class="btn btn-settings" onclick="toggleConfig()">⚙️</button>
-            </div>
-        </div>
-
-        <!-- Status Card -->
         <div class="card">
-            <div class="status-row">
-                <div class="status-info">
-                    <div class="status-dot" id="statusDot"></div>
-                    <span id="statusText">Stopped</span>
+            <div class="header">
+                <div>
+                    <h2>FVG CHoCH Bot</h2>
+                    <small id="symbolDisplay">BTC/USDT • 15m</small>
                 </div>
-                <button class="btn btn-start" id="toggleBtn" onclick="toggleBot()">Start Bot</button>
+                <button class="btn" onclick="toggleConfig()">⚙️</button>
             </div>
-            
+            <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
+                <span id="statusText">Stopped</span>
+                <button class="btn btn-start" id="toggleBtn" onclick="toggleBot()">Start</button>
+            </div>
             <div class="stats">
-                <div class="stat">
-                    <div class="stat-value" id="totalSignals">0</div>
-                    <div class="stat-label">Total Signals</div>
-                </div>
-                <div class="stat bullish">
-                    <div class="stat-value" id="bullishSignals">0</div>
-                    <div class="stat-label">Bullish</div>
-                </div>
-                <div class="stat bearish">
-                    <div class="stat-value" id="bearishSignals">0</div>
-                    <div class="stat-label">Bearish</div>
-                </div>
+                <div class="stat"><div class="stat-value" id="totalSignals">0</div><small>Total</small></div>
+                <div class="stat"><div class="stat-value" id="bullishSignals" style="color:#22c55e">0</div><small>Bullish</small></div>
+                <div class="stat"><div class="stat-value" id="bearishSignals" style="color:#ef4444">0</div><small>Bearish</small></div>
             </div>
-            
-            <div class="last-check" id="lastCheck"></div>
         </div>
 
-        <!-- Configuration -->
         <div class="card config" id="configPanel">
-            <h3 style="margin-bottom: 15px;">Configuration</h3>
-            
-            <div class="form-group">
-                <label class="form-label">Trading Pair</label>
+            <div class="tab-buttons">
+                <button class="tab-btn active" onclick="switchTab(event,'basic')">Basic</button>
+                <button class="tab-btn" onclick="switchTab(event,'zones')">Zones</button>
+                <button class="tab-btn" onclick="switchTab(event,'advanced')">Advanced</button>
+            </div>
+
+            <div id="basicTab" class="tab-content active">
+                <label>Symbol</label>
                 <select class="form-select" id="symbolInput" onchange="saveConfig()">
                     <option value="BTCUSDT">BTC/USDT</option>
                     <option value="ETHUSDT">ETH/USDT</option>
-                    <option value="BNBUSDT">BNB/USDT</option>
-                    <option value="SOLUSDT">SOL/USDT</option>
-                    <option value="ADAUSDT">ADA/USDT</option>
-                    <option value="XRPUSDT">XRP/USDT</option>
                 </select>
-            </div>
-
-            <div class="form-group">
-                <label class="form-label">Timeframe</label>
+                <label>Timeframe</label>
                 <select class="form-select" id="timeframeInput" onchange="saveConfig()">
-                    <option value="1m">1 Minute</option>
-                    <option value="5m">5 Minutes</option>
-                    <option value="15m">15 Minutes</option>
-                    <option value="30m">30 Minutes</option>
-                    <option value="1h">1 Hour</option>
-                    <option value="4h">4 Hours</option>
+                    <option value="5m">5m</option>
+                    <option value="15m">15m</option>
+                    <option value="1h">1h</option>
                 </select>
+                <label>Webhook</label>
+                <input class="form-input" id="webhookInput" onchange="saveConfig()" placeholder="Discord webhook">
             </div>
 
-            <div class="form-group">
-                <label class="form-label">Check Interval (seconds)</label>
-                <input type="number" class="form-input" id="intervalInput" value="60" min="10" onchange="saveConfig()">
+            <div id="zonesTab" class="tab-content">
+                <h3>Add Zone</h3>
+                <input class="form-input" id="zoneName" placeholder="Zone name">
+                <input class="form-input" id="zoneUpper" type="number" placeholder="Upper price">
+                <input class="form-input" id="zoneLower" type="number" placeholder="Lower price">
+                <select class="form-select" id="zoneFVG">
+                    <option value="none">No FVG</option>
+                    <option value="bullish">Bullish FVG</option>
+                    <option value="bearish">Bearish FVG</option>
+                    <option value="both">Both FVG</option>
+                </select>
+                <select class="form-select" id="zoneCHoCH">
+                    <option value="none">No CHoCH</option>
+                    <option value="bullish">Bullish CHoCH</option>
+                    <option value="bearish">Bearish CHoCH</option>
+                    <option value="both">Both CHoCH</option>
+                </select>
+                <button class="btn btn-primary" onclick="addZone()">Add Zone</button>
+                <div id="zonesList" style="margin-top:15px"></div>
             </div>
 
-            <div class="form-group">
-                <label class="form-label">Discord Webhook URL</label>
-                <input type="text" class="form-input" id="webhookInput" placeholder="https://discord.com/api/webhooks/..." onchange="saveConfig()">
-            </div>
-
-            <div class="form-group">
-                <label class="form-label">Alarm Sound</label>
+            <div id="advancedTab" class="tab-content">
+                <label>Alarm</label>
                 <select class="form-select" id="alarmInput" onchange="saveConfig()">
                     <option value="beep">Beep</option>
                     <option value="bell">Bell</option>
-                    <option value="chime">Chime</option>
-                    <option value="alert">Alert</option>
-                    <option value="none">No Alarm</option>
+                    <option value="none">None</option>
                 </select>
             </div>
-
-            <div class="form-group">
-                <label class="form-label">Alarm Duration (seconds)</label>
-                <input type="number" class="form-input" id="durationInput" value="3" min="1" max="10" onchange="saveConfig()">
-            </div>
-
-            <div class="form-group">
-                <label class="form-label" style="display: flex; align-items: center; gap: 8px;">
-                    <input type="checkbox" id="snoozeInput" onchange="saveConfig()" style="width: auto;">
-                    Enable Snooze Button (stops alarm early)
-                </label>
-            </div>
-
-            <div class="form-group">
-                <label class="form-label" style="display: flex; align-items: center; gap: 8px;">
-                    <input type="checkbox" id="wakeLockInput" onchange="saveConfig()" style="width: auto;">
-                    Keep Screen On (prevents phone sleep)
-                </label>
-            </div>
-
-            <div class="form-group">
-                <label class="form-label" style="display: flex; align-items: center; gap: 8px;">
-                    <input type="checkbox" id="notificationInput" onchange="saveConfig()" style="width: auto;">
-                    Show Notifications (works in mobile app)
-                </label>
-            </div>
-
-            <div style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 8px; padding: 12px; margin-top: 15px;">
-                <p style="font-size: 12px; color: #93c5fd; margin: 0;">
-                    <strong>📱 Mobile App Features:</strong><br>
-                    • Background running (keep app open)<br>
-                    • Wake lock (screen stays on)<br>
-                    • Push notifications<br>
-                    • Vibration alerts<br>
-                    <br>
-                    <strong>⚠️ Note:</strong> For 24/7 operation, keep the app open and phone plugged in.
-                </p>
-            </div>
-
-            <button class="btn btn-primary" onclick="toggleConfig()">Save & Close</button>
         </div>
 
-        <!-- Signals -->
         <div class="card">
-            <h3 style="margin-bottom: 15px;">Recent Signals</h3>
-            <div id="signalsList">
-                <div class="empty">No signals yet. Start the bot to receive trading signals.</div>
-            </div>
+            <h3>Signals</h3>
+            <div id="signalsList"><p style="text-align:center;color:#64748b">No signals</p></div>
         </div>
     </div>
 
-    <button id="snoozeBtn" class="snooze-btn hidden" onclick="snoozeAlarm()">🔕 SNOOZE ALARM</button>
-
     <script>
-        // Mobile detection and app environment check
-        function isMobileDevice() {
-            const userAgent = navigator.userAgent || navigator.vendor || window.opera;
-            
-            // Check if running in AppsGeyser or mobile app
-            const isAppsGeyser = /AppsGeyser|wv|Android.*AppsGeyser/i.test(userAgent);
-            const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
-            const isMobile = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent.toLowerCase());
-            const isTablet = /(tablet|ipad|playbook|silk)|(android(?!.*mobi))/i.test(userAgent.toLowerCase());
-            
-            return isAppsGeyser || isStandalone || isMobile || isTablet;
-        }
+        function switchTab(e,tab){document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));e.target.classList.add('active');document.getElementById(tab+'Tab').classList.add('active');}
 
-        function isDesktopBrowser() {
-            const userAgent = navigator.userAgent.toLowerCase();
-            const isDesktop = !isMobileDevice() && 
-                             (userAgent.indexOf('win') > -1 || 
-                              userAgent.indexOf('mac') > -1 || 
-                              userAgent.indexOf('linux') > -1) &&
-                             userAgent.indexOf('mobile') === -1 &&
-                             userAgent.indexOf('tablet') === -1;
-            return isDesktop;
-        }
+        let bot={isRunning:false,symbol:'BTCUSDT',timeframe:'15m',webhook:'',alarmSound:'beep',zones:[],signals:[],stats:{total:0,bullish:0,bearish:0},sentSignals:new Set(),intervalId:null,lastPivots:{high:[],low:[]}};
 
-        // Check device on load
-        window.addEventListener('load', function() {
-            const deviceStatusEl = document.getElementById('deviceStatus');
-            
-            if (isDesktopBrowser()) {
-                document.getElementById('webWarning').classList.remove('hidden');
-                deviceStatusEl.textContent = '🖥️ Desktop Mode (Limited)';
-                deviceStatusEl.style.color = '#ef4444';
-                console.warn('Desktop browser detected - some features may not work properly');
-            } else {
-                deviceStatusEl.textContent = '📱 Mobile App Mode (Full Features)';
-                deviceStatusEl.style.color = '#10b981';
-                console.log('Mobile device detected - full functionality enabled');
-            }
-        });
+        function loadConfig(){const saved=localStorage.getItem('bot');if(saved){const d=JSON.parse(saved);bot={...bot,...d};bot.sentSignals=new Set(d.sentSignals||[]);}document.getElementById('symbolInput').value=bot.symbol;document.getElementById('timeframeInput').value=bot.timeframe;document.getElementById('webhookInput').value=bot.webhook;document.getElementById('alarmInput').value=bot.alarmSound;updateDisplay();renderZones();}
 
-        let bot = {
-            isRunning: false,
-            symbol: 'BTCUSDT',
-            timeframe: '15m',
-            interval: 60,
-            webhook: '',
-            alarmSound: 'beep',
-            alarmDuration: 3,
-            snoozeEnabled: true,
-            keepScreenOn: false,
-            showNotifications: true,
-            wakeLock: null,
-            signals: [],
-            stats: { total: 0, bullish: 0, bearish: 0 },
-            sentSignals: new Set(),
-            usedSwings: new Set(),
-            intervalId: null,
-            audioContext: null,
-            activeOscillators: []
-        };
+        function saveConfig(){bot.symbol=document.getElementById('symbolInput').value;bot.timeframe=document.getElementById('timeframeInput').value;bot.webhook=document.getElementById('webhookInput').value;bot.alarmSound=document.getElementById('alarmInput').value;localStorage.setItem('bot',JSON.stringify({...bot,sentSignals:Array.from(bot.sentSignals)}));updateDisplay();}
 
-        function loadConfig() {
-            const saved = localStorage.getItem('tradingBot');
-            if (saved) {
-                const data = JSON.parse(saved);
-                bot = { ...bot, ...data };
-                bot.sentSignals = new Set(data.sentSignals || []);
-                bot.usedSwings = new Set(data.usedSwings || []);
-            }
-            document.getElementById('symbolInput').value = bot.symbol;
-            document.getElementById('timeframeInput').value = bot.timeframe;
-            document.getElementById('intervalInput').value = bot.interval;
-            document.getElementById('webhookInput').value = bot.webhook;
-            document.getElementById('alarmInput').value = bot.alarmSound || 'beep';
-            document.getElementById('durationInput').value = bot.alarmDuration || 3;
-            document.getElementById('snoozeInput').checked = bot.snoozeEnabled !== false;
-            document.getElementById('wakeLockInput').checked = bot.keepScreenOn || false;
-            document.getElementById('notificationInput').checked = bot.showNotifications !== false;
-            updateDisplay();
-        }
+        function toggleConfig(){document.getElementById('configPanel').classList.toggle('show');}
 
-        function saveConfig() {
-            bot.symbol = document.getElementById('symbolInput').value;
-            bot.timeframe = document.getElementById('timeframeInput').value;
-            bot.interval = parseInt(document.getElementById('intervalInput').value) || 60;
-            bot.webhook = document.getElementById('webhookInput').value;
-            bot.alarmSound = document.getElementById('alarmInput').value;
-            bot.alarmDuration = parseInt(document.getElementById('durationInput').value) || 3;
-            bot.snoozeEnabled = document.getElementById('snoozeInput').checked;
-            bot.keepScreenOn = document.getElementById('wakeLockInput').checked;
-            bot.showNotifications = document.getElementById('notificationInput').checked;
-            
-            // Handle wake lock
-            if (bot.keepScreenOn && bot.isRunning) {
-                requestWakeLock();
-            } else {
-                releaseWakeLock();
-            }
-            
-            const data = {
-                symbol: bot.symbol,
-                timeframe: bot.timeframe,
-                interval: bot.interval,
-                webhook: bot.webhook,
-                alarmSound: bot.alarmSound,
-                alarmDuration: bot.alarmDuration,
-                snoozeEnabled: bot.snoozeEnabled,
-                keepScreenOn: bot.keepScreenOn,
-                showNotifications: bot.showNotifications,
-                signals: bot.signals,
-                stats: bot.stats,
-                sentSignals: Array.from(bot.sentSignals),
-                usedSwings: Array.from(bot.usedSwings)
-            };
-            localStorage.setItem('tradingBot', JSON.stringify(data));
-            updateDisplay();
-        }
+        function addZone(){const name=document.getElementById('zoneName').value;const upper=parseFloat(document.getElementById('zoneUpper').value);const lower=parseFloat(document.getElementById('zoneLower').value);const fvg=document.getElementById('zoneFVG').value;const choch=document.getElementById('zoneCHoCH').value;if(!name||!upper||!lower||upper<=lower){alert('Invalid zone');return;}bot.zones.push({id:Date.now(),name,upper,lower,fvg,choch,broken:false});document.getElementById('zoneName').value='';document.getElementById('zoneUpper').value='';document.getElementById('zoneLower').value='';saveConfig();renderZones();}
 
-        function toggleConfig() {
-            const panel = document.getElementById('configPanel');
-            panel.classList.toggle('show');
-        }
+        function removeZone(id){bot.zones=bot.zones.filter(z=>z.id!==id);saveConfig();renderZones();}
 
-        function toggleBot() {
-            if (!bot.webhook) {
-                alert('Please configure Discord Webhook URL first!');
-                toggleConfig();
-                return;
-            }
-            
-            // Check if on desktop browser
-            if (isDesktopBrowser() && !bot.isRunning) {
-                const confirmStart = confirm(
-                    '⚠️ Desktop Browser Detected\n\n' +
-                    'This app is optimized for mobile devices. Background running and wake lock features will not work on desktop browsers.\n\n' +
-                    'For best experience, install as a mobile app using AppsGeyser.\n\n' +
-                    'Do you still want to start the bot?'
-                );
-                if (!confirmStart) return;
-            }
-            
-            if (bot.isRunning) {
-                stopBot();
-            } else {
-                startBot();
-            }
-        }
+        function renderZones(){const list=document.getElementById('zonesList');if(!bot.zones.length){list.innerHTML='<p style="color:#64748b">No zones</p>';return;}list.innerHTML=bot.zones.map(z=>`<div class="zone-item ${z.broken?'broken':''}"><strong>${z.name}</strong> ${z.broken?'(BROKEN)':''}<br>$${z.lower}-$${z.upper}<br><small>FVG:${z.fvg} CHoCH:${z.choch}</small><br><button class="btn" style="margin-top:5px;font-size:11px" onclick="removeZone(${z.id})">Remove</button></div>`).join('');}
 
-        function startBot() {
-            // Request notification permission on mobile
-            if (isMobileDevice() && bot.showNotifications && 'Notification' in window) {
-                if (Notification.permission === 'default') {
-                    Notification.requestPermission().then(permission => {
-                        if (permission === 'granted') {
-                            console.log('✅ Notification permission granted');
-                        }
-                    });
-                }
-            }
-            
-            bot.isRunning = true;
-            document.getElementById('statusDot').classList.add('active');
-            document.getElementById('statusText').textContent = 'Running';
-            document.getElementById('toggleBtn').textContent = 'Stop Bot';
-            document.getElementById('toggleBtn').className = 'btn btn-stop';
-            
-            // Only enable wake lock on mobile devices
-            if (bot.keepScreenOn && isMobileDevice()) {
-                requestWakeLock();
-            } else if (bot.keepScreenOn && !isMobileDevice()) {
-                console.warn('Wake lock not available on desktop browsers');
-            }
-            
-            checkMarket();
-            bot.intervalId = setInterval(checkMarket, bot.interval * 1000);
-        }
+        function toggleBot(){if(!bot.webhook){alert('Set webhook!');toggleConfig();return;}bot.isRunning?stopBot():startBot();}
 
-        function stopBot() {
-            bot.isRunning = false;
-            document.getElementById('statusDot').classList.remove('active');
-            document.getElementById('statusText').textContent = 'Stopped';
-            document.getElementById('toggleBtn').textContent = 'Start Bot';
-            document.getElementById('toggleBtn').className = 'btn btn-start';
-            
-            releaseWakeLock();
-            
-            if (bot.intervalId) {
-                clearInterval(bot.intervalId);
-                bot.intervalId = null;
-            }
-        }
+        function startBot(){bot.isRunning=true;document.getElementById('statusText').textContent='Running';document.getElementById('toggleBtn').textContent='Stop';document.getElementById('toggleBtn').className='btn btn-stop';checkMarket();bot.intervalId=setInterval(checkMarket,60000);}
 
-        async function requestWakeLock() {
-            if (!isMobileDevice()) {
-                console.warn('Wake lock is only available on mobile devices');
-                return;
-            }
-            
-            try {
-                if ('wakeLock' in navigator) {
-                    bot.wakeLock = await navigator.wakeLock.request('screen');
-                    console.log('✅ Wake lock activated - screen will stay on');
-                    
-                    bot.wakeLock.addEventListener('release', () => {
-                        console.log('Wake lock released');
-                    });
-                } else {
-                    console.warn('Wake Lock API not supported on this device');
-                }
-            } catch (error) {
-                console.error('Wake lock error:', error);
-            }
-        }
+        function stopBot(){bot.isRunning=false;document.getElementById('statusText').textContent='Stopped';document.getElementById('toggleBtn').textContent='Start';document.getElementById('toggleBtn').className='btn btn-start';if(bot.intervalId)clearInterval(bot.intervalId);}
 
-        function releaseWakeLock() {
-            if (bot.wakeLock) {
-                bot.wakeLock.release();
-                bot.wakeLock = null;
-                console.log('Wake lock released');
-            }
-        }
+        async function checkMarket(){try{const candles=await fetchCandles();if(!candles||candles.length<10)return;const price=candles[candles.length-1][4];checkZones(candles,price);const fvgs=detectFVG(candles);if(!fvgs.length)return;const fvg=fvgs[fvgs.length-1];const choch=detectCHoCH(candles);const zone=bot.zones.find(z=>!z.broken&&price>=z.lower&&price<=z.upper);if(!zone)return;const fvgOk=zone.fvg==='none'||zone.fvg===fvg.type||zone.fvg==='both';const chochOk=zone.choch==='none'||(choch&&(zone.choch===choch.type||zone.choch==='both'));if(!fvgOk&&!chochOk)return;const signal={id:Date.now(),type:fvg.type,price,zone:zone.name,fvg:true,choch:choch?true:false,timestamp:new Date().toISOString()};bot.signals.unshift(signal);bot.signals=bot.signals.slice(0,20);bot.stats.total++;if(fvg.type==='bullish')bot.stats.bullish++;else bot.stats.bearish++;await sendToDiscord(signal);playAlarm();saveConfig();updateDisplay();}catch(e){}}
 
-        async function checkMarket() {
-            document.getElementById('lastCheck').textContent = 'Last check: ' + new Date().toLocaleTimeString();
-            
-            try {
-                const candles = await fetchCandles();
-                if (!candles || candles.length < 5) return;
+        function checkZones(candles,price){bot.zones.forEach(z=>{if(z.broken)return;const close=candles[candles.length-1][4];const prevClose=candles[candles.length-2][4];if((close>z.upper&&prevClose<=z.upper)||(close<z.lower&&prevClose>=z.lower)){z.broken=true;alert(`Zone "${z.name}" BROKEN`);}});saveConfig();renderZones();}
 
-                // Check if last candle is complete (not live)
-                const currentTime = Date.now();
-                const lastCandleTime = candles[candles.length - 1][0];
-                const timeframeMs = {
-                    '1m': 60000, '5m': 300000, '15m': 900000,
-                    '30m': 1800000, '1h': 3600000, '4h': 14400000
-                };
-                const tfMs = timeframeMs[bot.timeframe] || 900000;
+        async function fetchCandles(){const res=await fetch(`https://api.binance.com/api/v3/klines?symbol=${bot.symbol}&interval=${bot.timeframe}&limit=50`);const d=await res.json();return d.map(c=>[parseInt(c[0]),parseFloat(c[1]),parseFloat(c[2]),parseFloat(c[3]),parseFloat(c[4])]);}
 
-                // Only analyze if last candle is complete
-                const completedCandles = currentTime - lastCandleTime < tfMs 
-                    ? candles.slice(0, -1)  // Exclude live candle
-                    : candles;
+        function detectFVG(candles){const fvgs=[];for(let i=2;i<candles.length;i++){if(candles[i][3]>candles[i-2][2]){fvgs.push({type:'bullish',top:candles[i][3],bottom:candles[i-2][2],timestamp:candles[i][0]});}else if(candles[i][2]<candles[i-2][3]){fvgs.push({type:'bearish',top:candles[i-2][3],bottom:candles[i][2],timestamp:candles[i][0]});}}return fvgs;}
 
-                if (completedCandles.length < 5) return;
+        function detectCHoCH(candles){const len=5;let highs=[],lows=[];for(let i=len;i<candles.length-len;i++){const isHigh=candles.slice(i-len,i+len+1).every((c,idx)=>idx===len||c[2]<=candles[i][2]);const isLow=candles.slice(i-len,i+len+1).every((c,idx)=>idx===len||c[3]>=candles[i][3]);if(isHigh)highs.push({price:candles[i][2],index:i});if(isLow)lows.push({price:candles[i][3],index:i});}if(highs.length>=2&&lows.length>=2){const lastHigh=highs[highs.length-1];const prevHigh=highs[highs.length-2];const lastLow=lows[lows.length-1];const prevLow=lows[lows.length-2];if(lastLow.index>lastHigh.index&&lastLow.price>prevLow.price)return{type:'bullish'};if(lastHigh.index>lastLow.index&&lastHigh.price<prevHigh.price)return{type:'bearish'};}return null;}
 
-                const fvgs = detectFVG(completedCandles);
-                if (fvgs.length === 0) return;
+        async function sendToDiscord(signal){const embed={title:`🎯 ${signal.type.toUpperCase()} SIGNAL`,description:`Zone: ${signal.zone}\nPrice: $${signal.price.toFixed(2)}`,color:signal.type==='bullish'?3066993:15158332,fields:[{name:'Pattern',value:`${signal.fvg?'FVG ':''}${signal.choch?'CHoCH':''}`}]};await fetch(bot.webhook,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({embeds:[embed]})});}
 
-                const latestFvg = fvgs[fvgs.length - 1];
-                const swing = detectSwing(completedCandles, latestFvg);
-                
-                if (!swing) return;
+        function playAlarm(){if(bot.alarmSound==='none')return;const ctx=new AudioContext();const osc=ctx.createOscillator();const gain=ctx.createGain();osc.connect(gain);gain.connect(ctx.destination);osc.frequency.value=800;gain.gain.setValueAtTime(0.3,ctx.currentTime);gain.gain.exponentialRampToValueAtTime(0.01,ctx.currentTime+0.3);osc.start();osc.stop(ctx.currentTime+0.3);}
 
-                const swingKey = swing.timestampStart + '_' + swing.timestampMid;
-                const signalKey = latestFvg.type + '_' + latestFvg.timestamp + '_' + swing.timestampMid;
-
-                if (bot.usedSwings.has(swingKey) || bot.sentSignals.has(signalKey)) return;
-
-                const currentPrice = completedCandles[completedCandles.length - 1][4];
-                const signal = calculateSignal(latestFvg, swing, currentPrice);
-                
-                await sendToDiscord(signal);
-                playAlarm();
-                showNotification(signal);
-                
-                bot.sentSignals.add(signalKey);
-                bot.usedSwings.add(swingKey);
-                bot.signals.unshift(signal);
-                bot.signals = bot.signals.slice(0, 20);
-                bot.stats.total++;
-                if (signal.type === 'bullish') bot.stats.bullish++;
-                else bot.stats.bearish++;
-                
-                saveConfig();
-                updateDisplay();
-            } catch (error) {
-                console.error('Error:', error);
-            }
-        }
-
-        async function fetchCandles() {
-            const response = await fetch(`https://api.binance.com/api/v3/klines?symbol=${bot.symbol}&interval=${bot.timeframe}&limit=100`);
-            const data = await response.json();
-            return data.map(c => [parseInt(c[0]), parseFloat(c[1]), parseFloat(c[2]), parseFloat(c[3]), parseFloat(c[4])]);
-        }
-
-        function detectFVG(candles) {
-            const fvgs = [];
-            for (let i = 2; i < candles.length; i++) {
-                if (candles[i][3] > candles[i-2][2]) {
-                    fvgs.push({ type: 'bullish', index: i, top: candles[i][3], bottom: candles[i-2][2], timestamp: candles[i][0] });
-                } else if (candles[i][2] < candles[i-2][3]) {
-                    fvgs.push({ type: 'bearish', index: i, top: candles[i-2][3], bottom: candles[i][2], timestamp: candles[i][0] });
-                }
-            }
-            return fvgs;
-        }
-
-        function detectSwing(candles, fvg) {
-            const swings = [];
-            const start = Math.max(3, fvg.index - 15);
-            
-            for (let i = start; i < fvg.index - 2; i++) {
-                const c1 = candles[i], c2 = candles[i+1], c3 = candles[i+2];
-                
-                if (fvg.type === 'bullish' && c2[3] < c1[3] && c2[3] < c3[3]) {
-                    swings.push({ type: 'swing_low', swingPoint: c2[3], timestampStart: c1[0], timestampMid: c2[0] });
-                } else if (fvg.type === 'bearish' && c2[2] > c1[2] && c2[2] > c3[2]) {
-                    swings.push({ type: 'swing_high', swingPoint: c2[2], timestampStart: c1[0], timestampMid: c2[0] });
-                }
-            }
-            
-            return swings.length > 0 ? swings[swings.length - 1] : null;
-        }
-
-        function calculateSignal(fvg, swing, price) {
-            const range = fvg.top - fvg.bottom;
-            let entry, stop, tp1, tp2, risk, reward;
-            
-            if (fvg.type === 'bullish') {
-                entry = fvg.bottom;
-                stop = swing.swingPoint * 0.997;
-                tp1 = fvg.top;
-                tp2 = fvg.top + (range * 1.5);
-                risk = entry - stop;
-                reward = tp2 - entry;
-            } else {
-                entry = fvg.top;
-                stop = swing.swingPoint * 1.003;
-                tp1 = fvg.bottom;
-                tp2 = fvg.bottom - (range * 1.5);
-                risk = stop - entry;
-                reward = entry - tp2;
-            }
-            
-            return {
-                id: Date.now(),
-                type: fvg.type,
-                timestamp: new Date().toISOString(),
-                price: price,
-                entry: entry,
-                stop: stop,
-                tp1: tp1,
-                tp2: tp2,
-                rr: (reward / risk).toFixed(2)
-            };
-        }
-
-        async function sendToDiscord(signal) {
-            const embed = {
-                title: `🎯 ${signal.type.toUpperCase()} SIGNAL`,
-                description: `**${bot.symbol}** | ${bot.timeframe}\n✅ FVG + 3-Candle Swing`,
-                color: signal.type === 'bullish' ? 3066993 : 15158332,
-                fields: [
-                    { name: '💰 Price', value: `$${signal.price.toFixed(2)}`, inline: true },
-                    { name: '🟢 Entry', value: `$${signal.entry.toFixed(2)}`, inline: true },
-                    { name: '⏸️ Stop', value: `$${signal.stop.toFixed(2)}`, inline: true },
-                    { name: '🎁 TP1', value: `$${signal.tp1.toFixed(2)}`, inline: true },
-                    { name: '🎁 TP2', value: `$${signal.tp2.toFixed(2)}`, inline: true },
-                    { name: '📏 R:R', value: `1:${signal.rr}`, inline: true }
-                ],
-                timestamp: new Date().toISOString()
-            };
-            
-            await fetch(bot.webhook, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ embeds: [embed] })
-            });
-        }
-
-        function playAlarm() {
-            if (bot.alarmSound === 'none') return;
-            
-            // Show snooze button if enabled
-            if (bot.snoozeEnabled) {
-                document.getElementById('snoozeBtn').classList.remove('hidden');
-            }
-            
-            try {
-                if (!bot.audioContext) {
-                    bot.audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                }
-                
-                const ctx = bot.audioContext;
-                const duration = bot.alarmDuration || 3;
-                const now = ctx.currentTime;
-                
-                // Clear any previous oscillators
-                bot.activeOscillators.forEach(osc => {
-                    try { osc.stop(); } catch(e) {}
-                });
-                bot.activeOscillators = [];
-                
-                if (bot.alarmSound === 'beep') {
-                    // Simple beep sound
-                    for (let i = 0; i < 3; i++) {
-                        const osc = ctx.createOscillator();
-                        const gain = ctx.createGain();
-                        
-                        osc.connect(gain);
-                        gain.connect(ctx.destination);
-                        
-                        osc.frequency.value = 800;
-                        osc.type = 'sine';
-                        
-                        gain.gain.setValueAtTime(0.3, now + i * 0.5);
-                        gain.gain.exponentialRampToValueAtTime(0.01, now + i * 0.5 + 0.3);
-                        
-                        osc.start(now + i * 0.5);
-                        osc.stop(now + i * 0.5 + 0.3);
-                        bot.activeOscillators.push(osc);
-                    }
-                } else if (bot.alarmSound === 'bell') {
-                    // Bell sound
-                    const osc = ctx.createOscillator();
-                    const gain = ctx.createGain();
-                    
-                    osc.connect(gain);
-                    gain.connect(ctx.destination);
-                    
-                    osc.frequency.value = 1000;
-                    osc.type = 'sine';
-                    
-                    gain.gain.setValueAtTime(0.5, now);
-                    gain.gain.exponentialRampToValueAtTime(0.01, now + duration);
-                    
-                    osc.start(now);
-                    osc.stop(now + duration);
-                    bot.activeOscillators.push(osc);
-                } else if (bot.alarmSound === 'chime') {
-                    // Chime sound (ascending notes)
-                    const frequencies = [523.25, 659.25, 783.99]; // C, E, G
-                    frequencies.forEach((freq, i) => {
-                        const osc = ctx.createOscillator();
-                        const gain = ctx.createGain();
-                        
-                        osc.connect(gain);
-                        gain.connect(ctx.destination);
-                        
-                        osc.frequency.value = freq;
-                        osc.type = 'sine';
-                        
-                        gain.gain.setValueAtTime(0.3, now + i * 0.3);
-                        gain.gain.exponentialRampToValueAtTime(0.01, now + i * 0.3 + 0.5);
-                        
-                        osc.start(now + i * 0.3);
-                        osc.stop(now + i * 0.3 + 0.5);
-                        bot.activeOscillators.push(osc);
-                    });
-                } else if (bot.alarmSound === 'alert') {
-                    // Alert sound (alternating high-low)
-                    const times = Math.floor(duration / 0.4);
-                    for (let i = 0; i < times; i++) {
-                        const osc = ctx.createOscillator();
-                        const gain = ctx.createGain();
-                        
-                        osc.connect(gain);
-                        gain.connect(ctx.destination);
-                        
-                        osc.frequency.value = i % 2 === 0 ? 900 : 700;
-                        osc.type = 'square';
-                        
-                        gain.gain.setValueAtTime(0.2, now + i * 0.4);
-                        gain.gain.setValueAtTime(0, now + i * 0.4 + 0.2);
-                        
-                        osc.start(now + i * 0.4);
-                        osc.stop(now + i * 0.4 + 0.2);
-                        bot.activeOscillators.push(osc);
-                    }
-                }
-                
-                // Auto-hide snooze button after alarm duration
-                setTimeout(() => {
-                    document.getElementById('snoozeBtn').classList.add('hidden');
-                    bot.activeOscillators = [];
-                }, duration * 1000);
-                
-                // Also try vibration on mobile
-                if ('vibrate' in navigator) {
-                    const vibrationPattern = [];
-                    for (let i = 0; i < duration * 2; i++) {
-                        vibrationPattern.push(200, 200);
-                    }
-                    navigator.vibrate(vibrationPattern);
-                }
-            } catch (error) {
-                console.error('Error playing alarm:', error);
-            }
-        }
-
-        function snoozeAlarm() {
-            // Stop all active oscillators
-            bot.activeOscillators.forEach(osc => {
-                try { osc.stop(); } catch(e) {}
-            });
-            bot.activeOscillators = [];
-            
-            // Stop vibration
-            if ('vibrate' in navigator) {
-                navigator.vibrate(0);
-            }
-            
-            // Hide snooze button
-            document.getElementById('snoozeBtn').classList.add('hidden');
-        }
-
-        function showNotification(signal) {
-            if (!bot.showNotifications || !isMobileDevice()) return;
-            
-            // Request notification permission if not granted
-            if ('Notification' in window && Notification.permission === 'default') {
-                Notification.requestPermission();
-            }
-            
-            // Show notification if permission granted
-            if ('Notification' in window && Notification.permission === 'granted') {
-                const notification = new Notification('🎯 New Trading Signal!', {
-                    body: `${signal.type.toUpperCase()} - ${bot.symbol}\nEntry: ${signal.entry.toFixed(2)}\nTP1: ${signal.tp1.toFixed(2)}`,
-                    icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y="75" font-size="75">📊</text></svg>',
-                    badge: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y="75" font-size="75">📈</text></svg>',
-                    tag: 'trading-signal',
-                    requireInteraction: true,
-                    vibrate: [200, 100, 200]
-                });
-                
-                notification.onclick = function() {
-                    window.focus();
-                    notification.close();
-                };
-            }
-        }
-
-        function updateDisplay() {
-            document.getElementById('symbolDisplay').textContent = `${bot.symbol} • ${bot.timeframe}`;
-            document.getElementById('totalSignals').textContent = bot.stats.total;
-            document.getElementById('bullishSignals').textContent = bot.stats.bullish;
-            document.getElementById('bearishSignals').textContent = bot.stats.bearish;
-            
-            const list = document.getElementById('signalsList');
-            if (bot.signals.length === 0) {
-                list.innerHTML = '<div class="empty">No signals yet. Start the bot to receive trading signals.</div>';
-            } else {
-                list.innerHTML = bot.signals.map(s => `
-                    <div class="signal ${s.type}">
-                        <div class="signal-header">
-                            <span class="signal-type">${s.type.toUpperCase()} SIGNAL</span>
-                            <span class="signal-time">${new Date(s.timestamp).toLocaleTimeString()}</span>
-                        </div>
-                        <div class="signal-grid">
-                            <div class="signal-item">
-                                <div class="signal-item-label">Price</div>
-                                <div class="signal-item-value">$${s.price.toFixed(2)}</div>
-                            </div>
-                            <div class="signal-item">
-                                <div class="signal-item-label">Entry</div>
-                                <div class="signal-item-value">$${s.entry.toFixed(2)}</div>
-                            </div>
-                            <div class="signal-item">
-                                <div class="signal-item-label">Stop Loss</div>
-                                <div class="signal-item-value red">$${s.stop.toFixed(2)}</div>
-                            </div>
-                            <div class="signal-item">
-                                <div class="signal-item-label">TP1</div>
-                                <div class="signal-item-value green">$${s.tp1.toFixed(2)}</div>
-                            </div>
-                            <div class="signal-item">
-                                <div class="signal-item-label">TP2</div>
-                                <div class="signal-item-value green">$${s.tp2.toFixed(2)}</div>
-                            </div>
-                            <div class="signal-item">
-                                <div class="signal-item-label">Risk:Reward</div>
-                                <div class="signal-item-value blue">1:${s.rr}</div>
-                            </div>
-                        </div>
-                    </div>
-                `).join('');
-            }
-        }
+        function updateDisplay(){document.getElementById('symbolDisplay').textContent=`${bot.symbol} • ${bot.timeframe}`;document.getElementById('totalSignals').textContent=bot.stats.total;document.getElementById('bullishSignals').textContent=bot.stats.bullish;document.getElementById('bearishSignals').textContent=bot.stats.bearish;const list=document.getElementById('signalsList');if(!bot.signals.length){list.innerHTML='<p style="text-align:center;color:#64748b">No signals</p>';return;}list.innerHTML=bot.signals.map(s=>`<div class="signal ${s.type}"><strong style="color:${s.type==='bullish'?'#22c55e':'#ef4444'}">${s.type.toUpperCase()}</strong><br>Zone: ${s.zone}<br>Price: $${s.price.toFixed(2)}<br><span class="signal-badge fvg">FVG</span>${s.choch?'<span class="signal-badge choch">CHoCH</span>':''}<br><small>${new Date(s.timestamp).toLocaleString()}</small></div>`).join('');}
 
         loadConfig();
     </script>
