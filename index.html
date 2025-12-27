@@ -20,17 +20,23 @@
         /* Top Navigation */
         .navbar {
             background: #1e293b;
-            padding: 1rem 2rem;
+            padding: 1rem 1.5rem;
             display: flex;
             justify-content: space-between;
             align-items: center;
             border-bottom: 1px solid #334155;
+            position: sticky;
+            top: 0;
+            z-index: 100;
         }
 
         .logo {
-            font-size: 1.5rem;
+            font-size: 1.3rem;
             font-weight: bold;
             color: #3b82f6;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
         }
 
         .nav-links {
@@ -42,6 +48,7 @@
             color: #94a3b8;
             text-decoration: none;
             transition: color 0.3s;
+            font-size: 0.95rem;
         }
 
         .nav-links a:hover, .nav-links a.active {
@@ -67,12 +74,27 @@
             align-items: center;
             justify-content: center;
             font-weight: bold;
+            font-size: 0.85rem;
+        }
+
+        .user-email {
+            font-size: 0.9rem;
+        }
+
+        /* Mobile Menu Button */
+        .mobile-menu-btn {
+            display: none;
+            background: none;
+            border: none;
+            color: #e2e8f0;
+            font-size: 1.5rem;
+            cursor: pointer;
         }
 
         /* Main Layout */
         .main-container {
             display: flex;
-            height: calc(100vh - 65px);
+            min-height: calc(100vh - 65px);
         }
 
         /* Left Sidebar */
@@ -114,6 +136,7 @@
         .strategy-name {
             font-weight: 600;
             color: #e2e8f0;
+            font-size: 0.95rem;
         }
 
         .status-dot {
@@ -121,6 +144,7 @@
             height: 8px;
             border-radius: 50%;
             background: #10b981;
+            flex-shrink: 0;
         }
 
         .status-dot.stopped {
@@ -128,7 +152,7 @@
         }
 
         .strategy-pnl {
-            font-size: 0.9rem;
+            font-size: 0.85rem;
             color: #10b981;
         }
 
@@ -147,6 +171,7 @@
             cursor: pointer;
             margin-top: 1rem;
             transition: background 0.3s;
+            font-size: 0.95rem;
         }
 
         .add-strategy-btn:hover {
@@ -203,6 +228,7 @@
             display: flex;
             gap: 0.5rem;
             margin-bottom: 1rem;
+            flex-wrap: wrap;
         }
 
         .timeframe-btn {
@@ -213,6 +239,7 @@
             border-radius: 6px;
             cursor: pointer;
             transition: all 0.3s;
+            font-size: 0.9rem;
         }
 
         .timeframe-btn:hover, .timeframe-btn.active {
@@ -231,7 +258,6 @@
             overflow: hidden;
         }
 
-        /* Simple Candlestick Visualization */
         .candles {
             display: flex;
             align-items: flex-end;
@@ -297,6 +323,7 @@
         .signal-type {
             font-weight: 600;
             color: #10b981;
+            font-size: 0.9rem;
         }
 
         .signal-type.sell {
@@ -304,12 +331,12 @@
         }
 
         .signal-time {
-            font-size: 0.85rem;
+            font-size: 0.8rem;
             color: #94a3b8;
         }
 
         .signal-details {
-            font-size: 0.9rem;
+            font-size: 0.85rem;
             color: #cbd5e1;
         }
 
@@ -318,21 +345,227 @@
             background: #334155;
             margin: 1.5rem 0;
         }
+
+        /* RESPONSIVE STYLES */
+
+        /* Tablet (768px and below) */
+        @media (max-width: 1024px) {
+            .right-sidebar {
+                display: none;
+            }
+
+            .portfolio-overview {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 1rem;
+            }
+
+            .metric-value {
+                font-size: 1.5rem;
+            }
+        }
+
+        /* Mobile (768px and below) */
+        @media (max-width: 768px) {
+            .navbar {
+                padding: 1rem;
+            }
+
+            .logo {
+                font-size: 1.1rem;
+            }
+
+            .nav-links {
+                display: none;
+            }
+
+            .mobile-menu-btn {
+                display: block;
+            }
+
+            .user-email {
+                display: none;
+            }
+
+            .user-profile {
+                padding: 0.5rem;
+            }
+
+            .main-container {
+                flex-direction: column;
+            }
+
+            .left-sidebar {
+                width: 100%;
+                border-right: none;
+                border-bottom: 1px solid #334155;
+                padding: 1rem;
+            }
+
+            .sidebar-title {
+                font-size: 1rem;
+            }
+
+            .strategy-card {
+                padding: 0.875rem;
+            }
+
+            .center-content {
+                padding: 1rem;
+            }
+
+            .portfolio-overview {
+                padding: 1rem;
+                grid-template-columns: repeat(2, 1fr);
+                gap: 1rem;
+            }
+
+            .metric-label {
+                font-size: 0.75rem;
+            }
+
+            .metric-value {
+                font-size: 1.4rem;
+            }
+
+            .chart-section {
+                padding: 1rem;
+            }
+
+            .chart-placeholder {
+                height: 300px;
+            }
+
+            .candles {
+                padding: 1rem;
+            }
+
+            .candle {
+                width: 12px;
+            }
+
+            .timeframe-btn {
+                padding: 0.5rem 0.75rem;
+                font-size: 0.85rem;
+            }
+
+            .right-sidebar {
+                display: none;
+            }
+        }
+
+        /* Small Mobile (480px and below) */
+        @media (max-width: 480px) {
+            .logo {
+                font-size: 1rem;
+            }
+
+            .portfolio-overview {
+                grid-template-columns: 1fr;
+                gap: 0.75rem;
+                padding: 0.875rem;
+            }
+
+            .metric {
+                padding: 0.5rem 0;
+                border-bottom: 1px solid #334155;
+            }
+
+            .metric:last-child {
+                border-bottom: none;
+            }
+
+            .metric-value {
+                font-size: 1.6rem;
+            }
+
+            .chart-placeholder {
+                height: 250px;
+            }
+
+            .timeframe-selector {
+                gap: 0.4rem;
+            }
+
+            .timeframe-btn {
+                padding: 0.4rem 0.6rem;
+                font-size: 0.8rem;
+            }
+
+            .strategy-name {
+                font-size: 0.9rem;
+            }
+
+            .strategy-pnl {
+                font-size: 0.8rem;
+            }
+        }
+
+        /* Bottom Navigation for Mobile */
+        .mobile-bottom-nav {
+            display: none;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #1e293b;
+            border-top: 1px solid #334155;
+            padding: 0.75rem;
+            z-index: 100;
+        }
+
+        .mobile-nav-items {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+        }
+
+        .mobile-nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.25rem;
+            color: #94a3b8;
+            text-decoration: none;
+            font-size: 0.75rem;
+            padding: 0.5rem;
+        }
+
+        .mobile-nav-item.active {
+            color: #3b82f6;
+        }
+
+        .mobile-nav-icon {
+            font-size: 1.4rem;
+        }
+
+        @media (max-width: 768px) {
+            .mobile-bottom-nav {
+                display: block;
+            }
+
+            .center-content {
+                padding-bottom: 5rem;
+            }
+        }
     </style>
 </head>
 <body>
     <!-- Top Navigation -->
     <nav class="navbar">
-        <div class="logo">⚡ TradeAI Pro</div>
+        <div class="logo">
+            <span>⚡</span>
+            <span>TradeAI Pro</span>
+        </div>
         <div class="nav-links">
             <a href="#" class="active">Dashboard</a>
             <a href="#">Strategies</a>
             <a href="#">Analytics</a>
             <a href="#">Settings</a>
         </div>
+        <button class="mobile-menu-btn">☰</button>
         <div class="user-profile">
             <div class="user-avatar">JD</div>
-            <span>john@gmail.com</span>
+            <span class="user-email">john@gmail.com</span>
         </div>
     </nav>
 
@@ -467,7 +700,7 @@
             </div>
         </main>
 
-        <!-- Right Sidebar -->
+        <!-- Right Sidebar (Hidden on mobile/tablet) -->
         <aside class="right-sidebar">
             <h3 class="sidebar-title">Active Signals</h3>
             
@@ -531,5 +764,27 @@
             </div>
         </aside>
     </div>
+
+    <!-- Mobile Bottom Navigation -->
+    <nav class="mobile-bottom-nav">
+        <div class="mobile-nav-items">
+            <a href="#" class="mobile-nav-item active">
+                <div class="mobile-nav-icon">📊</div>
+                <div>Dashboard</div>
+            </a>
+            <a href="#" class="mobile-nav-item">
+                <div class="mobile-nav-icon">⚙️</div>
+                <div>Strategies</div>
+            </a>
+            <a href="#" class="mobile-nav-item">
+                <div class="mobile-nav-icon">📈</div>
+                <div>Analytics</div>
+            </a>
+            <a href="#" class="mobile-nav-item">
+                <div class="mobile-nav-icon">👤</div>
+                <div>Profile</div>
+            </a>
+        </div>
+    </nav>
 </body>
 </html>
