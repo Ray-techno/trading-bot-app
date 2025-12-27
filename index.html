@@ -1,382 +1,409 @@
-import React, { useState, useEffect } from 'react';
-import { Bell, Plus, X, Code, TrendingUp, Activity, Settings, BarChart3 } from 'lucide-react';
-
-const TradingPlatform = () => {
-  const [strategies, setStrategies] = useState([
-    { id: 1, name: 'RSI Scalper', status: 'running', mode: 'trading', pnl: 1234.50, code: 'def strategy():\n    # RSI Strategy\n    if rsi < 30:\n        return "BUY"\n    elif rsi > 70:\n        return "SELL"' },
-    { id: 2, name: 'MA Cross', status: 'running', mode: 'signal', pnl: 892.30, code: 'def strategy():\n    # Moving Average\n    if ma_fast > ma_slow:\n        return "BUY"' },
-    { id: 3, name: 'Breakout Hunter', status: 'stopped', mode: 'trading', pnl: -156.20, code: '' },
-  ]);
-
-  const [notifications, setNotifications] = useState([
-    { id: 1, type: 'buy', message: 'BTC/USDT @ $43,250', strategy: 'RSI Scalper', time: '2 min ago' },
-    { id: 2, type: 'sell', message: 'ETH/USDT @ $2,280', strategy: 'MA Cross', time: '5 min ago' },
-  ]);
-
-  const [showNotifications, setShowNotifications] = useState(false);
-  const [showAddStrategy, setShowAddStrategy] = useState(false);
-  const [showEditStrategy, setShowEditStrategy] = useState(null);
-  const [newStrategy, setNewStrategy] = useState({ name: '', code: '', mode: 'signal' });
-
-  const totalPnL = strategies.reduce((sum, s) => sum + s.pnl, 0);
-  const runningStrategies = strategies.filter(s => s.status === 'running').length;
-
-  const addNotification = (type, message, strategy) => {
-    const newNotif = {
-      id: Date.now(),
-      type,
-      message,
-      strategy,
-      time: 'Just now'
-    };
-    setNotifications(prev => [newNotif, ...prev].slice(0, 10));
-  };
-
-  const toggleStrategyStatus = (id) => {
-    setStrategies(prev => prev.map(s => {
-      if (s.id === id) {
-        const newStatus = s.status === 'running' ? 'stopped' : 'running';
-        if (newStatus === 'running') {
-          addNotification('info', `${s.name} started`, s.name);
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TradeAI Pro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
         }
-        return { ...s, status: newStatus };
-      }
-      return s;
-    }));
-  };
-
-  const toggleStrategyMode = (id) => {
-    setStrategies(prev => prev.map(s => {
-      if (s.id === id) {
-        const newMode = s.mode === 'trading' ? 'signal' : 'trading';
-        addNotification('info', `${s.name} switched to ${newMode} mode`, s.name);
-        return { ...s, mode: newMode };
-      }
-      return s;
-    }));
-  };
-
-  const addStrategy = () => {
-    if (newStrategy.name && newStrategy.code) {
-      const strategy = {
-        id: Date.now(),
-        name: newStrategy.name,
-        status: 'stopped',
-        mode: newStrategy.mode,
-        pnl: 0,
-        code: newStrategy.code
-      };
-      setStrategies(prev => [...prev, strategy]);
-      setNewStrategy({ name: '', code: '', mode: 'signal' });
-      setShowAddStrategy(false);
-      addNotification('success', `${strategy.name} created successfully`, strategy.name);
-    }
-  };
-
-  const updateStrategy = () => {
-    if (showEditStrategy && newStrategy.name && newStrategy.code) {
-      setStrategies(prev => prev.map(s => 
-        s.id === showEditStrategy ? { ...s, name: newStrategy.name, code: newStrategy.code, mode: newStrategy.mode } : s
-      ));
-      addNotification('success', `${newStrategy.name} updated`, newStrategy.name);
-      setShowEditStrategy(null);
-      setNewStrategy({ name: '', code: '', mode: 'signal' });
-    }
-  };
-
-  const deleteStrategy = (id) => {
-    const strategy = strategies.find(s => s.id === id);
-    setStrategies(prev => prev.filter(s => s.id !== id));
-    addNotification('info', `${strategy.name} deleted`, strategy.name);
-  };
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const runningStrats = strategies.filter(s => s.status === 'running' && s.mode === 'trading');
-      if (runningStrats.length > 0) {
-        const randomStrat = runningStrats[Math.floor(Math.random() * runningStrats.length)];
-        const change = (Math.random() - 0.4) * 100;
-        setStrategies(prev => prev.map(s => 
-          s.id === randomStrat.id ? { ...s, pnl: +(s.pnl + change).toFixed(2) } : s
-        ));
-        
-        if (Math.random() > 0.7) {
-          addNotification(
-            change > 0 ? 'buy' : 'sell',
-            `BTC/USDT @ $${(43000 + Math.random() * 1000).toFixed(0)}`,
-            randomStrat.name
-          );
+        .strategy-card {
+            transition: all 0.3s ease;
         }
-      }
-    }, 5000);
-    return () => clearInterval(interval);
-  }, [strategies]);
+        .strategy-card:hover {
+            transform: translateY(-4px);
+        }
+    </style>
+</head>
+<body class="min-h-screen text-slate-100">
+    <div id="app"></div>
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-slate-100">
-      {/* Navbar */}
-      <nav className="bg-slate-900/80 backdrop-blur-xl border-b border-blue-500/20 sticky top-0 z-50">
-        <div className="px-6 py-4 flex justify-between items-center">
-          <div className="flex items-center gap-2 text-2xl font-bold">
-            <TrendingUp className="text-blue-500" size={28} />
-            <span className="bg-gradient-to-r from-blue-500 to-purple-500 bg-clip-text text-transparent">
-              TradeAI Pro
-            </span>
-          </div>
-          
-          <div className="flex items-center gap-4">
-            <button 
-              onClick={() => setShowNotifications(!showNotifications)}
-              className="relative p-2 hover:bg-slate-800 rounded-lg transition-all"
-            >
-              <Bell size={22} />
-              {notifications.length > 0 && (
-                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">
-                  {notifications.length}
-                </span>
-              )}
-            </button>
-            <div className="flex items-center gap-2 bg-slate-800 px-4 py-2 rounded-lg">
-              <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center font-bold">
-                JD
-              </div>
-              <span className="text-sm">john@gmail.com</span>
-            </div>
-          </div>
-        </div>
-      </nav>
+    <script>
+        const app = {
+            strategies: [
+                { id: 1, name: 'RSI Scalper', status: 'running', mode: 'trading', pnl: 1234.50, code: 'def strategy():\n    if rsi < 30:\n        return "BUY"\n    elif rsi > 70:\n        return "SELL"' },
+                { id: 2, name: 'MA Cross', status: 'running', mode: 'signal', pnl: 892.30, code: 'def strategy():\n    if ma_fast > ma_slow:\n        return "BUY"' },
+                { id: 3, name: 'Breakout Hunter', status: 'stopped', mode: 'trading', pnl: -156.20, code: '' }
+            ],
+            notifications: [
+                { id: 1, type: 'buy', message: 'BTC/USDT @ $43,250', strategy: 'RSI Scalper', time: '2 min ago' },
+                { id: 2, type: 'sell', message: 'ETH/USDT @ $2,280', strategy: 'MA Cross', time: '5 min ago' }
+            ],
+            showNotifications: false,
+            showAddStrategy: false,
+            editingStrategy: null,
+            newStrategy: { name: '', code: '', mode: 'signal' }
+        };
 
-      {/* Notifications Panel */}
-      {showNotifications && (
-        <div className="fixed right-4 top-20 w-96 bg-slate-800 border border-blue-500/20 rounded-xl shadow-2xl z-50 max-h-[500px] overflow-y-auto">
-          <div className="p-4 border-b border-slate-700 flex justify-between items-center">
-            <h3 className="font-bold flex items-center gap-2">
-              <Bell size={18} /> Notifications
-            </h3>
-            <button onClick={() => setShowNotifications(false)} className="hover:text-red-400">
-              <X size={18} />
-            </button>
-          </div>
-          <div className="p-2">
-            {notifications.length === 0 ? (
-              <p className="text-center text-slate-400 py-8">No notifications</p>
-            ) : (
-              notifications.map(notif => (
-                <div key={notif.id} className={`p-3 mb-2 rounded-lg border-l-4 ${
-                  notif.type === 'buy' ? 'bg-green-500/10 border-green-500' :
-                  notif.type === 'sell' ? 'bg-red-500/10 border-red-500' :
-                  'bg-blue-500/10 border-blue-500'
-                }`}>
-                  <div className="flex justify-between items-start mb-1">
-                    <span className={`font-bold text-sm ${
-                      notif.type === 'buy' ? 'text-green-400' :
-                      notif.type === 'sell' ? 'text-red-400' :
-                      'text-blue-400'
-                    }`}>
-                      {notif.type.toUpperCase()}
-                    </span>
-                    <span className="text-xs text-slate-400">{notif.time}</span>
-                  </div>
-                  <p className="text-sm">{notif.message}</p>
-                  <p className="text-xs text-slate-400 mt-1">{notif.strategy}</p>
+        function render() {
+            const totalPnL = app.strategies.reduce((sum, s) => sum + s.pnl, 0);
+            const runningCount = app.strategies.filter(s => s.status === 'running').length;
+
+            document.getElementById('app').innerHTML = `
+                <!-- Navbar -->
+                <nav class="bg-slate-900/80 backdrop-blur-xl border-b border-blue-500/20 sticky top-0 z-50">
+                    <div class="px-6 py-4 flex justify-between items-center">
+                        <div class="flex items-center gap-2 text-2xl font-bold">
+                            <span class="text-blue-500">⚡</span>
+                            <span class="bg-gradient-to-r from-blue-500 to-purple-500 bg-clip-text text-transparent">
+                                TradeAI Pro
+                            </span>
+                        </div>
+                        
+                        <div class="flex items-center gap-4">
+                            <button onclick="toggleNotifications()" class="relative p-2 hover:bg-slate-800 rounded-lg transition-all">
+                                <span class="text-2xl">🔔</span>
+                                ${app.notifications.length > 0 ? `
+                                    <span class="absolute -top-1 -right-1 bg-red-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">
+                                        ${app.notifications.length}
+                                    </span>
+                                ` : ''}
+                            </button>
+                            <div class="flex items-center gap-2 bg-slate-800 px-4 py-2 rounded-lg">
+                                <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center font-bold text-sm">
+                                    JD
+                                </div>
+                                <span class="text-sm hidden md:block">john@gmail.com</span>
+                            </div>
+                        </div>
+                    </div>
+                </nav>
+
+                <!-- Notifications Panel -->
+                ${app.showNotifications ? `
+                    <div class="fixed right-4 top-20 w-96 max-w-[90vw] bg-slate-800 border border-blue-500/20 rounded-xl shadow-2xl z-50 max-h-[500px] overflow-y-auto">
+                        <div class="p-4 border-b border-slate-700 flex justify-between items-center sticky top-0 bg-slate-800">
+                            <h3 class="font-bold">🔔 Notifications</h3>
+                            <button onclick="toggleNotifications()" class="hover:text-red-400">✕</button>
+                        </div>
+                        <div class="p-2">
+                            ${app.notifications.length === 0 ? 
+                                '<p class="text-center text-slate-400 py-8">No notifications</p>' :
+                                app.notifications.map(notif => `
+                                    <div class="p-3 mb-2 rounded-lg border-l-4 ${
+                                        notif.type === 'buy' ? 'bg-green-500/10 border-green-500' :
+                                        notif.type === 'sell' ? 'bg-red-500/10 border-red-500' :
+                                        'bg-blue-500/10 border-blue-500'
+                                    }">
+                                        <div class="flex justify-between items-start mb-1">
+                                            <span class="font-bold text-sm ${
+                                                notif.type === 'buy' ? 'text-green-400' :
+                                                notif.type === 'sell' ? 'text-red-400' :
+                                                'text-blue-400'
+                                            }">
+                                                ${notif.type.toUpperCase()}
+                                            </span>
+                                            <span class="text-xs text-slate-400">${notif.time}</span>
+                                        </div>
+                                        <p class="text-sm">${notif.message}</p>
+                                        <p class="text-xs text-slate-400 mt-1">${notif.strategy}</p>
+                                    </div>
+                                `).join('')
+                            }
+                        </div>
+                    </div>
+                ` : ''}
+
+                <!-- Main Content -->
+                <div class="container mx-auto px-4 py-6">
+                    <!-- Stats -->
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                        <div class="bg-slate-800/50 backdrop-blur-xl border border-blue-500/20 rounded-xl p-4 md:p-6">
+                            <p class="text-slate-400 text-xs md:text-sm mb-2">Total PnL</p>
+                            <p class="text-2xl md:text-3xl font-bold ${totalPnL >= 0 ? 'text-green-400' : 'text-red-400'}">
+                                $${totalPnL.toFixed(2)}
+                            </p>
+                        </div>
+                        <div class="bg-slate-800/50 backdrop-blur-xl border border-blue-500/20 rounded-xl p-4 md:p-6">
+                            <p class="text-slate-400 text-xs md:text-sm mb-2">Active</p>
+                            <p class="text-2xl md:text-3xl font-bold">${runningCount}</p>
+                        </div>
+                        <div class="bg-slate-800/50 backdrop-blur-xl border border-blue-500/20 rounded-xl p-4 md:p-6">
+                            <p class="text-slate-400 text-xs md:text-sm mb-2">Trades</p>
+                            <p class="text-2xl md:text-3xl font-bold">1,847</p>
+                        </div>
+                        <div class="bg-slate-800/50 backdrop-blur-xl border border-blue-500/20 rounded-xl p-4 md:p-6">
+                            <p class="text-slate-400 text-xs md:text-sm mb-2">Win Rate</p>
+                            <p class="text-2xl md:text-3xl font-bold">68.5%</p>
+                        </div>
+                    </div>
+
+                    <!-- Strategies -->
+                    <div class="bg-slate-800/50 backdrop-blur-xl border border-blue-500/20 rounded-xl p-4 md:p-6">
+                        <div class="flex justify-between items-center mb-6 flex-wrap gap-4">
+                            <h2 class="text-xl md:text-2xl font-bold flex items-center gap-2">
+                                <span class="text-blue-500">📊</span>
+                                My Strategies
+                            </h2>
+                            <button
+                                onclick="showAddStrategyModal()"
+                                class="flex items-center gap-2 bg-gradient-to-r from-blue-500 to-purple-500 px-4 py-2 rounded-lg font-semibold hover:shadow-lg hover:shadow-blue-500/50 transition-all text-sm md:text-base"
+                            >
+                                <span>+</span> Add Strategy
+                            </button>
+                        </div>
+
+                        <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
+                            ${app.strategies.map(strategy => `
+                                <div class="strategy-card bg-slate-900/50 border border-slate-700 rounded-xl p-5 hover:border-blue-500/50">
+                                    <div class="flex justify-between items-start mb-4">
+                                        <h3 class="font-bold text-base md:text-lg">${strategy.name}</h3>
+                                        <span class="px-3 py-1 rounded-full text-xs font-semibold ${
+                                            strategy.status === 'running' 
+                                                ? 'bg-green-500/20 text-green-400 border border-green-500/50' 
+                                                : 'bg-red-500/20 text-red-400 border border-red-500/50'
+                                        }">
+                                            ${strategy.status}
+                                        </span>
+                                    </div>
+
+                                    <div class="mb-4">
+                                        <div class="flex items-center justify-between mb-2">
+                                            <span class="text-sm text-slate-400">Mode:</span>
+                                            <button
+                                                onclick="toggleMode(${strategy.id})"
+                                                class="px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
+                                                    strategy.mode === 'trading'
+                                                        ? 'bg-purple-500/20 text-purple-400 border border-purple-500/50'
+                                                        : 'bg-blue-500/20 text-blue-400 border border-blue-500/50'
+                                                }"
+                                            >
+                                                ${strategy.mode === 'trading' ? '💰 Trading' : '📊 Signal Only'}
+                                            </button>
+                                        </div>
+                                        <p class="text-xl md:text-2xl font-bold ${strategy.pnl >= 0 ? 'text-green-400' : 'text-red-400'}">
+                                            ${strategy.pnl >= 0 ? '+' : ''}$${strategy.pnl.toFixed(2)}
+                                        </p>
+                                    </div>
+
+                                    <div class="flex gap-2">
+                                        <button
+                                            onclick="toggleStatus(${strategy.id})"
+                                            class="flex-1 py-2 rounded-lg font-semibold transition-all text-sm ${
+                                                strategy.status === 'running'
+                                                    ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30'
+                                                    : 'bg-green-500/20 text-green-400 hover:bg-green-500/30'
+                                            }"
+                                        >
+                                            ${strategy.status === 'running' ? 'Stop' : 'Start'}
+                                        </button>
+                                        <button
+                                            onclick="editStrategy(${strategy.id})"
+                                            class="px-4 py-2 bg-blue-500/20 text-blue-400 rounded-lg hover:bg-blue-500/30 transition-all text-sm"
+                                        >
+                                            📝
+                                        </button>
+                                        <button
+                                            onclick="deleteStrategy(${strategy.id})"
+                                            class="px-4 py-2 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 transition-all text-sm"
+                                        >
+                                            🗑️
+                                        </button>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
                 </div>
-              ))
-            )}
-          </div>
-        </div>
-      )}
 
-      {/* Main Content */}
-      <div className="container mx-auto px-4 py-6">
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <div className="bg-slate-800/50 backdrop-blur-xl border border-blue-500/20 rounded-xl p-6">
-            <p className="text-slate-400 text-sm mb-2">Total PnL</p>
-            <p className={`text-3xl font-bold ${totalPnL >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-              ${totalPnL.toFixed(2)}
-            </p>
-          </div>
-          <div className="bg-slate-800/50 backdrop-blur-xl border border-blue-500/20 rounded-xl p-6">
-            <p className="text-slate-400 text-sm mb-2">Active Strategies</p>
-            <p className="text-3xl font-bold">{runningStrategies}</p>
-          </div>
-          <div className="bg-slate-800/50 backdrop-blur-xl border border-blue-500/20 rounded-xl p-6">
-            <p className="text-slate-400 text-sm mb-2">Total Trades</p>
-            <p className="text-3xl font-bold">1,847</p>
-          </div>
-          <div className="bg-slate-800/50 backdrop-blur-xl border border-blue-500/20 rounded-xl p-6">
-            <p className="text-slate-400 text-sm mb-2">Win Rate</p>
-            <p className="text-3xl font-bold">68.5%</p>
-          </div>
-        </div>
+                <!-- Add/Edit Strategy Modal -->
+                ${app.showAddStrategy || app.editingStrategy ? `
+                    <div class="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                        <div class="bg-slate-800 border border-blue-500/20 rounded-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+                            <div class="p-6 border-b border-slate-700 flex justify-between items-center sticky top-0 bg-slate-800 z-10">
+                                <h2 class="text-xl md:text-2xl font-bold flex items-center gap-2">
+                                    <span>📝</span>
+                                    ${app.editingStrategy ? 'Edit Strategy' : 'Add New Strategy'}
+                                </h2>
+                                <button onclick="closeModal()" class="hover:text-red-400 transition-colors text-2xl">
+                                    ✕
+                                </button>
+                            </div>
 
-        {/* Strategies */}
-        <div className="bg-slate-800/50 backdrop-blur-xl border border-blue-500/20 rounded-xl p-6">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold flex items-center gap-2">
-              <Activity size={24} className="text-blue-500" />
-              My Strategies
-            </h2>
-            <button
-              onClick={() => setShowAddStrategy(true)}
-              className="flex items-center gap-2 bg-gradient-to-r from-blue-500 to-purple-500 px-4 py-2 rounded-lg font-semibold hover:shadow-lg hover:shadow-blue-500/50 transition-all"
-            >
-              <Plus size={20} /> Add Strategy
-            </button>
-          </div>
+                            <div class="p-6 space-y-4">
+                                <div>
+                                    <label class="block text-sm font-semibold mb-2">Strategy Name</label>
+                                    <input
+                                        type="text"
+                                        id="strategyName"
+                                        value="${app.newStrategy.name}"
+                                        placeholder="e.g., RSI Scalper"
+                                        class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 focus:outline-none focus:border-blue-500 text-slate-100"
+                                    />
+                                </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
-            {strategies.map(strategy => (
-              <div key={strategy.id} className="bg-slate-900/50 border border-slate-700 rounded-xl p-5 hover:border-blue-500/50 transition-all">
-                <div className="flex justify-between items-start mb-4">
-                  <h3 className="font-bold text-lg">{strategy.name}</h3>
-                  <div className="flex gap-2">
-                    <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                      strategy.status === 'running' 
-                        ? 'bg-green-500/20 text-green-400 border border-green-500/50' 
-                        : 'bg-red-500/20 text-red-400 border border-red-500/50'
-                    }`}>
-                      {strategy.status}
-                    </span>
-                  </div>
-                </div>
+                                <div>
+                                    <label class="block text-sm font-semibold mb-2">Mode</label>
+                                    <div class="flex gap-4 flex-wrap">
+                                        <label class="flex items-center gap-2 cursor-pointer">
+                                            <input
+                                                type="radio"
+                                                name="mode"
+                                                value="signal"
+                                                ${app.newStrategy.mode === 'signal' ? 'checked' : ''}
+                                                class="w-4 h-4"
+                                            />
+                                            <span class="text-sm">📊 Signal Only</span>
+                                        </label>
+                                        <label class="flex items-center gap-2 cursor-pointer">
+                                            <input
+                                                type="radio"
+                                                name="mode"
+                                                value="trading"
+                                                ${app.newStrategy.mode === 'trading' ? 'checked' : ''}
+                                                class="w-4 h-4"
+                                            />
+                                            <span class="text-sm">💰 Trading Mode</span>
+                                        </label>
+                                    </div>
+                                </div>
 
-                <div className="mb-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm text-slate-400">Mode:</span>
-                    <button
-                      onClick={() => toggleStrategyMode(strategy.id)}
-                      className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
-                        strategy.mode === 'trading'
-                          ? 'bg-purple-500/20 text-purple-400 border border-purple-500/50'
-                          : 'bg-blue-500/20 text-blue-400 border border-blue-500/50'
-                      }`}
-                    >
-                      {strategy.mode === 'trading' ? '💰 Trading' : '📊 Signal Only'}
-                    </button>
-                  </div>
-                  <p className={`text-2xl font-bold ${strategy.pnl >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                    {strategy.pnl >= 0 ? '+' : ''}${strategy.pnl.toFixed(2)}
-                  </p>
-                </div>
+                                <div>
+                                    <label class="block text-sm font-semibold mb-2">Python Strategy Code</label>
+                                    <textarea
+                                        id="strategyCode"
+                                        placeholder="def strategy():
+    # Your strategy logic here
+    if condition:
+        return 'BUY'
+    elif other_condition:
+        return 'SELL'
+    return 'HOLD'"
+                                        class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 font-mono text-sm focus:outline-none focus:border-blue-500 h-64 text-slate-100"
+                                    >${app.newStrategy.code}</textarea>
+                                    <p class="text-xs text-slate-400 mt-2">
+                                        ℹ️ Write your strategy in Python. Return BUY/SELL/HOLD signals.
+                                    </p>
+                                </div>
 
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => toggleStrategyStatus(strategy.id)}
-                    className={`flex-1 py-2 rounded-lg font-semibold transition-all ${
-                      strategy.status === 'running'
-                        ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30'
-                        : 'bg-green-500/20 text-green-400 hover:bg-green-500/30'
-                    }`}
-                  >
-                    {strategy.status === 'running' ? 'Stop' : 'Start'}
-                  </button>
-                  <button
-                    onClick={() => {
-                      setShowEditStrategy(strategy.id);
-                      setNewStrategy({ name: strategy.name, code: strategy.code, mode: strategy.mode });
-                    }}
-                    className="px-4 py-2 bg-blue-500/20 text-blue-400 rounded-lg hover:bg-blue-500/30 transition-all"
-                  >
-                    <Code size={18} />
-                  </button>
-                  <button
-                    onClick={() => deleteStrategy(strategy.id)}
-                    className="px-4 py-2 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 transition-all"
-                  >
-                    <X size={18} />
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
+                                <button
+                                    onclick="saveStrategy()"
+                                    class="w-full bg-gradient-to-r from-blue-500 to-purple-500 py-3 rounded-lg font-bold hover:shadow-lg hover:shadow-blue-500/50 transition-all"
+                                >
+                                    ${app.editingStrategy ? 'Update Strategy' : 'Create Strategy'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                ` : ''}
+            `;
+        }
 
-      {/* Add/Edit Strategy Modal */}
-      {(showAddStrategy || showEditStrategy) && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-slate-800 border border-blue-500/20 rounded-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b border-slate-700 flex justify-between items-center sticky top-0 bg-slate-800 z-10">
-              <h2 className="text-2xl font-bold flex items-center gap-2">
-                <Code className="text-blue-500" />
-                {showEditStrategy ? 'Edit Strategy' : 'Add New Strategy'}
-              </h2>
-              <button
-                onClick={() => {
-                  setShowAddStrategy(false);
-                  setShowEditStrategy(null);
-                  setNewStrategy({ name: '', code: '', mode: 'signal' });
-                }}
-                className="hover:text-red-400 transition-colors"
-              >
-                <X size={24} />
-              </button>
-            </div>
+        function toggleNotifications() {
+            app.showNotifications = !app.showNotifications;
+            render();
+        }
 
-            <div className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-semibold mb-2">Strategy Name</label>
-                <input
-                  type="text"
-                  value={newStrategy.name}
-                  onChange={(e) => setNewStrategy({ ...newStrategy, name: e.target.value })}
-                  placeholder="e.g., RSI Scalper"
-                  className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 focus:outline-none focus:border-blue-500"
-                />
-              </div>
+        function showAddStrategyModal() {
+            app.showAddStrategy = true;
+            app.newStrategy = { name: '', code: '', mode: 'signal' };
+            render();
+        }
 
-              <div>
-                <label className="block text-sm font-semibold mb-2">Mode</label>
-                <div className="flex gap-4">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="radio"
-                      value="signal"
-                      checked={newStrategy.mode === 'signal'}
-                      onChange={(e) => setNewStrategy({ ...newStrategy, mode: e.target.value })}
-                      className="w-4 h-4"
-                    />
-                    <span>📊 Signal Only (No auto-trading)</span>
-                  </label>
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="radio"
-                      value="trading"
-                      checked={newStrategy.mode === 'trading'}
-                      onChange={(e) => setNewStrategy({ ...newStrategy, mode: e.target.value })}
-                      className="w-4 h-4"
-                    />
-                    <span>💰 Trading Mode (Auto-execute)</span>
-                  </label>
-                </div>
-              </div>
+        function closeModal() {
+            app.showAddStrategy = false;
+            app.editingStrategy = null;
+            app.newStrategy = { name: '', code: '', mode: 'signal' };
+            render();
+        }
 
-              <div>
-                <label className="block text-sm font-semibold mb-2">Python Strategy Code</label>
-                <textarea
-                  value={newStrategy.code}
-                  onChange={(e) => setNewStrategy({ ...newStrategy, code: e.target.value })}
-                  placeholder="def strategy():&#10;    # Your strategy logic here&#10;    if condition:&#10;        return 'BUY'&#10;    elif other_condition:&#10;        return 'SELL'&#10;    return 'HOLD'"
-                  className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 font-mono text-sm focus:outline-none focus:border-blue-500 h-64"
-                />
-                <p className="text-xs text-slate-400 mt-2">
-                  ℹ️ Write your strategy in Python. Use technical indicators and return BUY/SELL/HOLD signals.
-                </p>
-              </div>
+        function toggleStatus(id) {
+            const strategy = app.strategies.find(s => s.id === id);
+            strategy.status = strategy.status === 'running' ? 'stopped' : 'running';
+            addNotification('info', `${strategy.name} ${strategy.status}`, strategy.name);
+            render();
+        }
 
-              <button
-                onClick={showEditStrategy ? updateStrategy : addStrategy}
-                className="w-full bg-gradient-to-r from-blue-500 to-purple-500 py-3 rounded-lg font-bold hover:shadow-lg hover:shadow-blue-500/50 transition-all"
-              >
-                {showEditStrategy ? 'Update Strategy' : 'Create Strategy'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
+        function toggleMode(id) {
+            const strategy = app.strategies.find(s => s.id === id);
+            strategy.mode = strategy.mode === 'trading' ? 'signal' : 'trading';
+            addNotification('info', `${strategy.name} switched to ${strategy.mode} mode`, strategy.name);
+            render();
+        }
 
-export default TradingPlatform;
+        function editStrategy(id) {
+            const strategy = app.strategies.find(s => s.id === id);
+            app.editingStrategy = id;
+            app.newStrategy = { name: strategy.name, code: strategy.code, mode: strategy.mode };
+            render();
+        }
+
+        function deleteStrategy(id) {
+            const strategy = app.strategies.find(s => s.id === id);
+            app.strategies = app.strategies.filter(s => s.id !== id);
+            addNotification('info', `${strategy.name} deleted`, strategy.name);
+            render();
+        }
+
+        function saveStrategy() {
+            const name = document.getElementById('strategyName').value;
+            const code = document.getElementById('strategyCode').value;
+            const mode = document.querySelector('input[name="mode"]:checked').value;
+
+            if (!name || !code) {
+                alert('Please fill in all fields');
+                return;
+            }
+
+            if (app.editingStrategy) {
+                const strategy = app.strategies.find(s => s.id === app.editingStrategy);
+                strategy.name = name;
+                strategy.code = code;
+                strategy.mode = mode;
+                addNotification('success', `${name} updated`, name);
+            } else {
+                app.strategies.push({
+                    id: Date.now(),
+                    name,
+                    code,
+                    mode,
+                    status: 'stopped',
+                    pnl: 0
+                });
+                addNotification('success', `${name} created`, name);
+            }
+
+            closeModal();
+        }
+
+        function addNotification(type, message, strategy) {
+            app.notifications.unshift({
+                id: Date.now(),
+                type,
+                message,
+                strategy,
+                time: 'Just now'
+            });
+            if (app.notifications.length > 10) {
+                app.notifications.pop();
+            }
+            render();
+        }
+
+        // Auto-update PnL for running strategies
+        setInterval(() => {
+            const running = app.strategies.filter(s => s.status === 'running' && s.mode === 'trading');
+            if (running.length > 0) {
+                const randomStrategy = running[Math.floor(Math.random() * running.length)];
+                const change = (Math.random() - 0.4) * 100;
+                randomStrategy.pnl = +(randomStrategy.pnl + change).toFixed(2);
+                
+                if (Math.random() > 0.7) {
+                    addNotification(
+                        change > 0 ? 'buy' : 'sell',
+                        `BTC/USDT @ $${(43000 + Math.random() * 1000).toFixed(0)}`,
+                        randomStrategy.name
+                    );
+                }
+                render();
+            }
+        }, 5000);
+
+        // Initial render
+        render();
+    </script>
+</body>
+</html>
